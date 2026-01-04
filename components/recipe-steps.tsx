@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Clock } from "lucide-react";
+import { Check, ChevronDown, Clock } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -12,9 +12,15 @@ import { Button } from "./ui/button";
 
 interface RecipeStepsProps {
   steps: RecipeStep[];
+  completedSteps?: Set<number>;
+  onToggleComplete?: (index: number) => void;
 }
 
-export function RecipeSteps({ steps }: RecipeStepsProps) {
+export function RecipeSteps({
+  steps,
+  completedSteps,
+  onToggleComplete,
+}: RecipeStepsProps) {
   const [openSteps, setOpenSteps] = useState<Set<number>>(new Set());
 
   const toggleStep = (index: number) => {
@@ -34,15 +40,32 @@ export function RecipeSteps({ steps }: RecipeStepsProps) {
         {steps.map((step, index) => {
           const hasDetails = step.details && step.details.trim().length > 0;
           const isOpen = openSteps.has(index);
+          const isCompleted = completedSteps?.has(index) ?? false;
 
           return (
             <li key={index} className="relative">
               <div className="flex gap-4">
                 {/* Step number */}
                 <div className="flex flex-col items-center">
-                  <span className="flex items-center justify-center size-7 rounded-full bg-primary text-primary-foreground text-sm font-medium shrink-0">
-                    {index + 1}
-                  </span>
+                  <button
+                    type="button"
+                    className={`flex items-center justify-center size-7 rounded-full text-sm font-medium shrink-0 transition-colors ${
+                      isCompleted
+                        ? "bg-emerald-600 text-white"
+                        : "bg-primary text-primary-foreground"
+                    } ${
+                      onToggleComplete ? "cursor-pointer" : "cursor-default"
+                    }`}
+                    aria-label={
+                      isCompleted
+                        ? `Mark step ${index + 1} as not done`
+                        : `Mark step ${index + 1} as done`
+                    }
+                    aria-pressed={isCompleted}
+                    onClick={() => onToggleComplete?.(index)}
+                  >
+                    {isCompleted ? <Check className="size-4" /> : index + 1}
+                  </button>
                   {index < steps.length - 1 && (
                     <div className="w-px flex-1 bg-border mt-2" />
                   )}
@@ -73,12 +96,14 @@ export function RecipeSteps({ steps }: RecipeStepsProps) {
                         <CollapsibleTrigger asChild>
                           <Button
                             variant="link"
-                            // className="inline-flex items-center gap-2 text-primary font-semibold text-sm hover:underline underline-offset-4"
+                            className="p-0 h-auto justify-start text-primary font-semibold text-sm"
                             aria-label={
                               isOpen ? "Hide learn more" : "Learn more"
                             }
                           >
-                            <span>Learn more</span>
+                            <span>
+                              {isOpen ? "Hide learn more" : "Learn more"}
+                            </span>
                             <ChevronDown
                               className={`size-5 transition-transform duration-200 ${
                                 isOpen ? "rotate-180" : ""

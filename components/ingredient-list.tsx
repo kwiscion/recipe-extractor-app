@@ -7,9 +7,17 @@ interface IngredientListProps {
   ingredients: Ingredient[]
   baseServings: number
   currentServings: number
+  checkedIngredients?: Set<number>
+  onToggleIngredient?: (index: number) => void
 }
 
-export function IngredientList({ ingredients, baseServings, currentServings }: IngredientListProps) {
+export function IngredientList({
+  ingredients,
+  baseServings,
+  currentServings,
+  checkedIngredients,
+  onToggleIngredient,
+}: IngredientListProps) {
   const scale = currentServings / baseServings
 
   return (
@@ -19,19 +27,28 @@ export function IngredientList({ ingredients, baseServings, currentServings }: I
         {ingredients.map((ingredient, index) => {
           const formattedQty = formatQuantity(ingredient.quantity, scale)
           const isScaled = scale !== 1 && ingredient.quantity > 0
+          const isChecked = checkedIngredients?.has(index) ?? false
 
           return (
-            <li key={index} className="flex items-start gap-3 py-1">
-              <span className="size-1.5 rounded-full bg-primary mt-2 shrink-0" />
-              <span className="text-foreground">
-                {formattedQty && (
-                  <span className={`font-medium ${isScaled ? "text-primary" : ""}`}>
-                    {formattedQty} {ingredient.unit}
-                  </span>
-                )}{" "}
-                <span>{ingredient.name}</span>
-                {ingredient.notes && <span className="text-muted-foreground text-sm"> ({ingredient.notes})</span>}
-              </span>
+            <li key={index} className="py-1">
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="mt-1 size-5 accent-primary"
+                  checked={isChecked}
+                  onChange={() => onToggleIngredient?.(index)}
+                  aria-label={`Mark ${ingredient.name} as gathered`}
+                />
+                <span className={`text-foreground ${isChecked ? "opacity-60 line-through" : ""}`}>
+                  {formattedQty && (
+                    <span className={`font-medium ${isScaled ? "text-primary" : ""}`}>
+                      {formattedQty} {ingredient.unit}
+                    </span>
+                  )}{" "}
+                  <span>{ingredient.name}</span>
+                  {ingredient.notes && <span className="text-muted-foreground text-sm"> ({ingredient.notes})</span>}
+                </span>
+              </label>
             </li>
           )
         })}

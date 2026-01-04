@@ -17,6 +17,36 @@ interface RecipeViewProps {
 
 export function RecipeView({ recipe, onBack }: RecipeViewProps) {
   const [servings, setServings] = useState(recipe.baseServings);
+  const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(
+    () => new Set()
+  );
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(
+    () => new Set()
+  );
+
+  const toggleIngredient = (index: number) => {
+    setCheckedIngredients((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
+
+  const toggleStepCompleted = (index: number) => {
+    setCompletedSteps((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
 
   return (
     <main className="min-h-screen bg-background">
@@ -75,12 +105,18 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
               ingredients={recipe.ingredients}
               baseServings={recipe.baseServings}
               currentServings={servings}
+              checkedIngredients={checkedIngredients}
+              onToggleIngredient={toggleIngredient}
             />
           </div>
 
           {/* Steps */}
           <div className="p-4 bg-card rounded-lg border">
-            <RecipeSteps steps={recipe.steps} />
+            <RecipeSteps
+              steps={recipe.steps}
+              completedSteps={completedSteps}
+              onToggleComplete={toggleStepCompleted}
+            />
           </div>
         </div>
 
