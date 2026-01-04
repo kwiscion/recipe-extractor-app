@@ -21,18 +21,17 @@ export function ScreenWakeLock() {
     return null;
   }
 
+  const isActive = released === false;
+
   return (
     <Button
       onClick={() => (released === false ? release() : request())}
       variant="outline"
       size="sm"
+      aria-pressed={isActive}
     >
-      {released === false ? (
-        <Lock className="size-4" />
-      ) : (
-        <Unlock className="size-4" />
-      )}
-      Keep screen on
+      {isActive ? <Lock className="size-4" /> : <Unlock className="size-4" />}
+      {isActive ? "Screen on" : "Keep screen on"}
     </Button>
   );
 }

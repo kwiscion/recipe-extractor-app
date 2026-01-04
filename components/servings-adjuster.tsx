@@ -34,12 +34,12 @@ export function ServingsAdjuster({ baseServings, currentServings, onChange }: Se
         <Button
           variant="outline"
           size="icon"
-          className="size-8 bg-transparent"
+          className="size-12 bg-transparent"
           onClick={decrease}
           disabled={currentServings <= 1}
           aria-label="Decrease servings"
         >
-          <Minus className="size-4" />
+          <Minus className="size-5" />
         </Button>
         <span className={`w-10 text-center font-medium tabular-nums ${isScaled ? "text-primary" : "text-foreground"}`}>
           {currentServings}
@@ -47,12 +47,12 @@ export function ServingsAdjuster({ baseServings, currentServings, onChange }: Se
         <Button
           variant="outline"
           size="icon"
-          className="size-8 bg-transparent"
+          className="size-12 bg-transparent"
           onClick={increase}
           disabled={currentServings >= 99}
           aria-label="Increase servings"
         >
-          <Plus className="size-4" />
+          <Plus className="size-5" />
         </Button>
       </div>
       {isScaled && (

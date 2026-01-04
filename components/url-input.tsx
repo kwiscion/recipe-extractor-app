@@ -6,6 +6,7 @@ import { useState } from "react"
 import { LinkIcon, ChefHat, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface UrlInputProps {
   onSubmit: (url: string) => void
@@ -14,6 +15,7 @@ interface UrlInputProps {
 
 export function UrlInput({ onSubmit, isLoading }: UrlInputProps) {
   const [url, setUrl] = useState("")
+  const urlInputId = "recipe-url"
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,8 +37,12 @@ export function UrlInput({ onSubmit, isLoading }: UrlInputProps) {
     <form onSubmit={handleSubmit} className="w-full max-w-xl mx-auto">
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
+          <Label htmlFor={urlInputId} className="sr-only">
+            Recipe URL
+          </Label>
           <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
+            id={urlInputId}
             type="url"
             placeholder="Paste recipe URL here..."
             value={url}
