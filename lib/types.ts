@@ -10,21 +10,22 @@ export const LLM_MODELS: LLMModel[] = [
   // OpenAI
   { id: "gpt-4o", name: "GPT-4o", provider: "openai" },
   { id: "gpt-4.1", name: "GPT-4.1", provider: "openai" },
+  { id: "gpt-5.2", name: "GPT-5.2", provider: "openai" },
   // Google
-  { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", provider: "google" },
-  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", provider: "google" },
+  { id: "gemini-3.0-flash", name: "Gemini 3.0 Flash", provider: "google" },
+  { id: "gemini-3.0-pro", name: "Gemini 3.0 Pro", provider: "google" },
   // Anthropic
   {
-    id: "claude-sonnet-4-20250514",
-    name: "Claude 4 Sonnet",
+    id: "claude-sonnet-4-5",
+    name: "Claude 4.5 Sonnet",
     provider: "anthropic",
   },
   {
-    id: "claude-opus-4-20250514",
-    name: "Claude 4 Opus",
+    id: "claude-opus-4-5",
+    name: "Claude 4.5 Opus",
     provider: "anthropic",
   },
-  { id: "claude-4-haiku", name: "Claude 4 Haiku", provider: "anthropic" },
+  { id: "claude-haiku-4-5", name: "Claude 4.5 Haiku", provider: "anthropic" },
 ];
 
 export interface Ingredient {
