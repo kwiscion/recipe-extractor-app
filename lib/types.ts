@@ -35,7 +35,15 @@ export interface Ingredient {
 }
 
 export interface RecipeStep {
-  summary: string;
+  /**
+   * Short label for scanning/jumping between steps (e.g. "Cook the pasta")
+   */
+  title: string;
+  /**
+   * Complete instruction that is sufficient to perform the step without expanding details.
+   * (e.g. "Boil in salted water and cook 2 minutes less than package time.")
+   */
+  instruction: string;
   details?: string;
   duration?: string;
 }

@@ -1,5 +1,25 @@
 import type { ApiKeys, Recipe } from "./types"
 
+function normalizeRecipe(recipe: any): Recipe {
+  const steps = Array.isArray(recipe?.steps)
+    ? recipe.steps.map((step: any) => {
+        const title = (step?.title ?? step?.summary ?? "").toString().trim()
+        const instruction = (step?.instruction ?? step?.summary ?? "").toString().trim()
+        return {
+          title,
+          instruction,
+          details: typeof step?.details === "string" ? step.details : "",
+          duration: typeof step?.duration === "string" ? step.duration : "",
+        }
+      })
+    : []
+
+  return {
+    ...recipe,
+    steps,
+  } as Recipe
+}
+
 const STORAGE_KEYS = {
   API_KEYS: "recipe-extractor-api-keys",
   RECIPES: "recipe-extractor-recipes",
@@ -25,7 +45,9 @@ export function getRecipes(): Recipe[] {
   const stored = localStorage.getItem(STORAGE_KEYS.RECIPES)
   if (!stored) return []
   try {
-    return JSON.parse(stored) as Recipe[]
+    const parsed = JSON.parse(stored)
+    if (!Array.isArray(parsed)) return []
+    return parsed.map(normalizeRecipe)
   } catch {
     return []
   }

@@ -44,9 +44,10 @@ export function RecipeSteps({ steps }: RecipeStepsProps) {
                 {/* Step content */}
                 <div className="flex-1 pb-4">
                   <Collapsible open={isOpen} onOpenChange={() => hasDetails && toggleStep(index)}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1 flex-1">
-                        <p className="text-foreground font-medium">{step.summary}</p>
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <p className="text-foreground font-medium">{step.title}</p>
+                        <p className="text-foreground leading-relaxed">{step.instruction}</p>
                         {step.duration && (
                           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="size-3" />
@@ -57,11 +58,12 @@ export function RecipeSteps({ steps }: RecipeStepsProps) {
                       {hasDetails && (
                         <CollapsibleTrigger asChild>
                           <button
-                            className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                            aria-label={isOpen ? "Hide details" : "Show details"}
+                            className="inline-flex items-center gap-2 text-primary font-semibold text-sm hover:underline underline-offset-4"
+                            aria-label={isOpen ? "Hide learn more" : "Learn more"}
                           >
+                            <span>{isOpen ? "Hide learn more" : "Learn more"}</span>
                             <ChevronDown
-                              className={`size-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                              className={`size-5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
                             />
                           </button>
                         </CollapsibleTrigger>

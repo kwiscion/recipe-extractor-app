@@ -17,8 +17,9 @@ Return ONLY a JSON object with this exact structure (no markdown, no code blocks
   ],
   "steps": [
     {
-      "summary": "Brief action (e.g., 'Mix dry ingredients')",
-      "details": "Detailed explanation with tips, substitutions, or technique notes (optional)",
+      "title": "Short label for the step (e.g., 'Cook the pasta')",
+      "instruction": "Complete instruction that is sufficient to perform the step without expanding details (e.g., 'Boil in salted water and cook 2 minutes less than package time.')",
+      "details": "Optional learn-more content: tips, substitutions, technique notes, troubleshooting (optional)",
       "duration": "estimated time like '5 minutes' (optional)"
     }
   ],
@@ -29,8 +30,8 @@ Guidelines:
 - For "quantity", use decimal numbers (0.5 instead of 1/2, 0.25 instead of 1/4, 0.333 instead of 1/3)
 - For items like "2-3 cloves garlic", use the lower number (2) and add the range in notes
 - For "to taste" or "as needed", use 0 for quantity and put the description in notes
-- Keep "summary" concise (under 10 words), put details in "details" field
-- Include substitution tips, technique notes, or common mistakes in the "details" field
+- Keep "title" concise (under 6 words). The "instruction" must be actionable and complete.
+- Put optional substitution tips, technique notes, or common mistakes in the "details" field as "learn more"
 - "warnings" should include: allergens, equipment needed, prep time requirements, items that need advance preparation
 - If servings aren't specified, estimate based on the recipe
 
@@ -244,12 +245,27 @@ function parseRecipeJSON(text: string): RecipeResponse {
       throw new Error("Missing required recipe fields");
     }
 
+    const normalizedSteps = Array.isArray(parsed.steps)
+      ? parsed.steps.map((step: any) => {
+          const title = (step?.title ?? step?.summary ?? "").toString().trim();
+          const instruction = (step?.instruction ?? step?.summary ?? "")
+            .toString()
+            .trim();
+          return {
+            title,
+            instruction,
+            details: typeof step?.details === "string" ? step.details : "",
+            duration: typeof step?.duration === "string" ? step.duration : "",
+          };
+        })
+      : [];
+
     return {
       title: parsed.title,
       description: parsed.description || "",
       baseServings: parsed.baseServings || 4,
       ingredients: parsed.ingredients || [],
-      steps: parsed.steps || [],
+      steps: normalizedSteps,
       warnings: parsed.warnings || [],
     };
   } catch {
