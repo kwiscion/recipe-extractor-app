@@ -1,22 +1,22 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { ArrowLeft, ExternalLink } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { ServingsAdjuster } from "@/components/servings-adjuster"
-import { IngredientList } from "@/components/ingredient-list"
-import { RecipeSteps } from "@/components/recipe-steps"
-import { WarningsSection } from "@/components/warnings-section"
-import { ScreenWakeLock } from "@/components/screen-wake-lock"
-import type { Recipe } from "@/lib/types"
+import { useState } from "react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ServingsAdjuster } from "@/components/servings-adjuster";
+import { IngredientList } from "@/components/ingredient-list";
+import { RecipeSteps } from "@/components/recipe-steps";
+import { WarningsSection } from "@/components/warnings-section";
+import { ScreenWakeLock } from "@/components/screen-wake-lock";
+import type { Recipe } from "@/lib/types";
 
 interface RecipeViewProps {
-  recipe: Recipe
-  onBack: () => void
+  recipe: Recipe;
+  onBack: () => void;
 }
 
 export function RecipeView({ recipe, onBack }: RecipeViewProps) {
-  const [servings, setServings] = useState(recipe.baseServings)
+  const [servings, setServings] = useState(recipe.baseServings);
 
   return (
     <main className="min-h-screen bg-background">
@@ -32,8 +32,14 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
 
         {/* Title */}
         <div className="space-y-2 mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground text-balance">{recipe.title}</h1>
-          {recipe.description && <p className="text-muted-foreground text-pretty">{recipe.description}</p>}
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground text-balance">
+            {recipe.title}
+          </h1>
+          {recipe.description && (
+            <p className="text-muted-foreground text-pretty">
+              {recipe.description}
+            </p>
+          )}
           <a
             href={recipe.sourceUrl}
             target="_blank"
@@ -54,7 +60,11 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
 
         {/* Servings */}
         <div className="mb-6 p-4 bg-card rounded-lg border">
-          <ServingsAdjuster baseServings={recipe.baseServings} currentServings={servings} onChange={setServings} />
+          <ServingsAdjuster
+            baseServings={recipe.baseServings}
+            currentServings={servings}
+            onChange={setServings}
+          />
         </div>
 
         {/* Content Grid - Ingredients and Steps */}
@@ -82,5 +92,5 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
         </div>
       </div>
     </main>
-  )
+  );
 }

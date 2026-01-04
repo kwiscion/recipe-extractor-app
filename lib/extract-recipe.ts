@@ -1,4 +1,4 @@
-import type { Recipe, ApiKeys } from "./types"
+import type { Recipe, RecipeResponse, ApiKeys } from "./types";
 
 const EXTRACTION_PROMPT = `You are a recipe extraction assistant. Extract the recipe from the provided content and return it as valid JSON.
 
@@ -34,9 +34,12 @@ Guidelines:
 - "warnings" should include: allergens, equipment needed, prep time requirements, items that need advance preparation
 - If servings aren't specified, estimate based on the recipe
 
-Extract the recipe from the following content:`
+Extract the recipe from the following content:`;
 
-async function scrapeWithFirecrawl(url: string, apiKey: string): Promise<string> {
+async function scrapeWithFirecrawl(
+  url: string,
+  apiKey: string
+): Promise<string> {
   const response = await fetch("https://api.firecrawl.dev/v1/scrape", {
     method: "POST",
     headers: {
@@ -47,29 +50,39 @@ async function scrapeWithFirecrawl(url: string, apiKey: string): Promise<string>
       url,
       formats: ["markdown"],
     }),
-  })
+  });
 
   if (!response.ok) {
-    const error = await response.text()
+    const error = await response.text();
     if (response.status === 401) {
-      throw new Error("Invalid Firecrawl API key. Please check your key and try again.")
+      throw new Error(
+        "Invalid Firecrawl API key. Please check your key and try again."
+      );
     }
     if (response.status === 402) {
-      throw new Error("Firecrawl API quota exceeded. Please check your plan limits.")
+      throw new Error(
+        "Firecrawl API quota exceeded. Please check your plan limits."
+      );
     }
-    throw new Error(`Failed to scrape page: ${error}`)
+    throw new Error(`Failed to scrape page: ${error}`);
   }
 
-  const data = await response.json()
+  const data = await response.json();
 
   if (!data.success || !data.data?.markdown) {
-    throw new Error("Failed to extract content from the page. The site may be blocking scraping.")
+    throw new Error(
+      "Failed to extract content from the page. The site may be blocking scraping."
+    );
   }
 
-  return data.data.markdown
+  return data.data.markdown;
 }
 
-async function extractWithOpenAI(content: string, model: string, apiKey: string): Promise<Recipe> {
+async function extractWithOpenAI(
+  content: string,
+  model: string,
+  apiKey: string
+): Promise<RecipeResponse> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -81,7 +94,8 @@ async function extractWithOpenAI(content: string, model: string, apiKey: string)
       messages: [
         {
           role: "system",
-          content: "You are a helpful assistant that extracts recipes from text and returns valid JSON.",
+          content:
+            "You are a helpful assistant that extracts recipes from text and returns valid JSON.",
         },
         {
           role: "user",
@@ -90,27 +104,33 @@ async function extractWithOpenAI(content: string, model: string, apiKey: string)
       ],
       temperature: 0.1,
     }),
-  })
+  });
 
   if (!response.ok) {
-    const error = await response.text()
+    const error = await response.text();
     if (response.status === 401) {
-      throw new Error("Invalid OpenAI API key. Please check your key and try again.")
+      throw new Error(
+        "Invalid OpenAI API key. Please check your key and try again."
+      );
     }
-    throw new Error(`OpenAI API error: ${error}`)
+    throw new Error(`OpenAI API error: ${error}`);
   }
 
-  const data = await response.json()
-  const text = data.choices?.[0]?.message?.content
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content;
 
   if (!text) {
-    throw new Error("No response from OpenAI")
+    throw new Error("No response from OpenAI");
   }
 
-  return parseRecipeJSON(text)
+  return parseRecipeJSON(text);
 }
 
-async function extractWithGoogle(content: string, model: string, apiKey: string): Promise<Recipe> {
+async function extractWithGoogle(
+  content: string,
+  model: string,
+  apiKey: string
+): Promise<RecipeResponse> {
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
@@ -132,28 +152,34 @@ async function extractWithGoogle(content: string, model: string, apiKey: string)
           temperature: 0.1,
         },
       }),
-    },
-  )
+    }
+  );
 
   if (!response.ok) {
-    const error = await response.text()
+    const error = await response.text();
     if (response.status === 400 || response.status === 401) {
-      throw new Error("Invalid Google AI API key. Please check your key and try again.")
+      throw new Error(
+        "Invalid Google AI API key. Please check your key and try again."
+      );
     }
-    throw new Error(`Google AI API error: ${error}`)
+    throw new Error(`Google AI API error: ${error}`);
   }
 
-  const data = await response.json()
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
   if (!text) {
-    throw new Error("No response from Google AI")
+    throw new Error("No response from Google AI");
   }
 
-  return parseRecipeJSON(text)
+  return parseRecipeJSON(text);
 }
 
-async function extractWithAnthropic(content: string, model: string, apiKey: string): Promise<Recipe> {
+async function extractWithAnthropic(
+  content: string,
+  model: string,
+  apiKey: string
+): Promise<RecipeResponse> {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -172,48 +198,50 @@ async function extractWithAnthropic(content: string, model: string, apiKey: stri
         },
       ],
     }),
-  })
+  });
 
   if (!response.ok) {
-    const error = await response.text()
+    const error = await response.text();
     if (response.status === 401) {
-      throw new Error("Invalid Anthropic API key. Please check your key and try again.")
+      throw new Error(
+        "Invalid Anthropic API key. Please check your key and try again."
+      );
     }
-    throw new Error(`Anthropic API error: ${error}`)
+    throw new Error(`Anthropic API error: ${error}`);
   }
 
-  const data = await response.json()
-  const text = data.content?.[0]?.text
+  const data = await response.json();
+  const text = data.content?.[0]?.text;
 
   if (!text) {
-    throw new Error("No response from Anthropic")
+    throw new Error("No response from Anthropic");
   }
 
-  return parseRecipeJSON(text)
+  return parseRecipeJSON(text);
 }
 
-function parseRecipeJSON(text: string): Omit<Recipe, "id" | "sourceUrl" | "extractedAt"> {
+function parseRecipeJSON(text: string): RecipeResponse {
   // Try to extract JSON from the response (in case LLM wraps it in markdown)
-  let jsonStr = text
+  let jsonStr = text;
 
   // Remove markdown code blocks if present
-  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (jsonMatch) {
-    jsonStr = jsonMatch[1]
+    jsonStr = jsonMatch[1];
   }
 
   // Try to find JSON object in the text
-  const objectMatch = jsonStr.match(/\{[\s\S]*\}/)
+  const objectMatch = jsonStr.match(/\{[\s\S]*\}/);
   if (objectMatch) {
-    jsonStr = objectMatch[0]
+    jsonStr = objectMatch[0];
   }
 
   try {
-    const parsed = JSON.parse(jsonStr)
+    const parsed = JSON.parse(jsonStr);
 
     // Validate required fields
     if (!parsed.title || !parsed.ingredients || !parsed.steps) {
-      throw new Error("Missing required recipe fields")
+      throw new Error("Missing required recipe fields");
     }
 
     return {
@@ -223,36 +251,55 @@ function parseRecipeJSON(text: string): Omit<Recipe, "id" | "sourceUrl" | "extra
       ingredients: parsed.ingredients || [],
       steps: parsed.steps || [],
       warnings: parsed.warnings || [],
-    }
+    };
   } catch {
-    throw new Error("Failed to parse recipe from AI response. The content might not contain a valid recipe.")
+    throw new Error(
+      "Failed to parse recipe from AI response. The content might not contain a valid recipe."
+    );
   }
 }
 
-export async function extractRecipe(url: string, keys: ApiKeys): Promise<Recipe> {
+export async function extractRecipe(
+  url: string,
+  keys: ApiKeys
+): Promise<Recipe> {
   // Step 1: Scrape the page
-  const content = await scrapeWithFirecrawl(url, keys.firecrawl)
+  const content = await scrapeWithFirecrawl(url, keys.firecrawl);
 
   // Truncate content if too long (to avoid token limits)
-  const maxChars = 15000
+  const maxChars = 15000;
   const truncatedContent =
-    content.length > maxChars ? content.slice(0, maxChars) + "\n\n[Content truncated...]" : content
+    content.length > maxChars
+      ? content.slice(0, maxChars) + "\n\n[Content truncated...]"
+      : content;
 
   // Step 2: Extract recipe with chosen LLM
-  let recipeData: Omit<Recipe, "id" | "sourceUrl" | "extractedAt">
+  let recipeData: RecipeResponse;
 
   switch (keys.llmProvider) {
     case "openai":
-      recipeData = await extractWithOpenAI(truncatedContent, keys.llmModel, keys.llmKey)
-      break
+      recipeData = await extractWithOpenAI(
+        truncatedContent,
+        keys.llmModel,
+        keys.llmKey
+      );
+      break;
     case "google":
-      recipeData = await extractWithGoogle(truncatedContent, keys.llmModel, keys.llmKey)
-      break
+      recipeData = await extractWithGoogle(
+        truncatedContent,
+        keys.llmModel,
+        keys.llmKey
+      );
+      break;
     case "anthropic":
-      recipeData = await extractWithAnthropic(truncatedContent, keys.llmModel, keys.llmKey)
-      break
+      recipeData = await extractWithAnthropic(
+        truncatedContent,
+        keys.llmModel,
+        keys.llmKey
+      );
+      break;
     default:
-      throw new Error("Unknown LLM provider")
+      throw new Error("Unknown LLM provider");
   }
 
   // Construct full recipe object
@@ -261,7 +308,7 @@ export async function extractRecipe(url: string, keys: ApiKeys): Promise<Recipe>
     id: crypto.randomUUID(),
     sourceUrl: url,
     extractedAt: new Date().toISOString(),
-  }
+  };
 
-  return recipe
+  return recipe;
 }
