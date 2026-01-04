@@ -1,15 +1,22 @@
 import { useWakeLock } from "react-screen-wake-lock";
 import { Button } from "@/components/ui/button";
 import { Unlock, Lock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export function ScreenWakeLock() {
+  const { toast } = useToast();
+
   const { isSupported, released, request, release } = useWakeLock({
-    onRequest: () => alert("Screen Wake Lock: requested!"),
-    onError: () => alert("An error happened 💥"),
-    onRelease: () => alert("Screen Wake Lock: released!"),
+    onRequest: () =>
+      toast({ description: "Screen will stay on while cooking" }),
+    onError: () =>
+      toast({
+        variant: "destructive",
+        description: "Couldn't enable wake lock",
+      }),
+    onRelease: () => {}, // Silent release, no notification needed
     reacquireOnPageVisible: true,
   });
-
   if (!isSupported) {
     return null;
   }
