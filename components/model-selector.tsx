@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { Settings } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -10,14 +10,14 @@ import {
   SelectValue,
   SelectGroup,
   SelectLabel,
-} from "@/components/ui/select"
-import { LLM_MODELS, type LLMModel, type ProviderApiKeys } from "@/lib/types"
+} from "@/components/ui/select";
+import { LLM_MODELS, type LLMModel, type ProviderApiKeys } from "@/lib/types";
 
 interface ModelSelectorProps {
-  selectedModel: string
-  providerKeys: ProviderApiKeys
-  onModelChange: (modelId: string) => void
-  onOpenSettings: () => void
+  selectedModel: string;
+  providerKeys: ProviderApiKeys;
+  onModelChange: (modelId: string) => void;
+  onOpenSettings: () => void;
 }
 
 export function ModelSelector({
@@ -28,22 +28,36 @@ export function ModelSelector({
 }: ModelSelectorProps) {
   // Filter models to only show those with API keys configured
   const availableModels = LLM_MODELS.filter((model) => {
-    const key = providerKeys[model.provider]
-    return key && key.trim().length > 0
-  })
+    const key = providerKeys[model.provider];
+    return key && key.trim().length > 0;
+  });
 
   // Group models by provider
-  const openaiModels = availableModels.filter((m) => m.provider === "openai")
-  const googleModels = availableModels.filter((m) => m.provider === "google")
-  const anthropicModels = availableModels.filter((m) => m.provider === "anthropic")
+  const openaiModels = availableModels.filter((m) => m.provider === "openai");
+  const googleModels = availableModels.filter((m) => m.provider === "google");
+  const anthropicModels = availableModels.filter(
+    (m) => m.provider === "anthropic"
+  );
 
   // Check if selected model is still available
-  const isSelectedAvailable = availableModels.some((m) => m.id === selectedModel)
-  const currentValue = isSelectedAvailable ? selectedModel : availableModels[0]?.id || ""
+  const isSelectedAvailable = availableModels.some(
+    (m) => m.id === selectedModel
+  );
+  const currentValue = isSelectedAvailable
+    ? selectedModel
+    : availableModels[0]?.id || "";
+
+  const handleValueChange = (value: string) => {
+    if (value === "settings") {
+      onOpenSettings();
+    } else {
+      onModelChange(value);
+    }
+  };
 
   return (
     <div className="flex gap-2 w-full max-w-xl mx-auto">
-      <Select value={currentValue} onValueChange={onModelChange}>
+      <Select value={currentValue} onValueChange={handleValueChange}>
         <SelectTrigger className="flex-1 h-12">
           <SelectValue placeholder="Select a model" />
         </SelectTrigger>
@@ -83,9 +97,13 @@ export function ModelSelector({
               No models available. Add API keys in settings.
             </div>
           )}
+          <SelectItem key="settings" value="settings">
+            <Settings className="size-4" />
+            Settings
+          </SelectItem>
         </SelectContent>
       </Select>
-      <Button
+      {/* <Button
         variant="outline"
         size="icon"
         onClick={onOpenSettings}
@@ -93,8 +111,7 @@ export function ModelSelector({
         title="API Settings"
       >
         <Settings className="size-5" />
-      </Button>
+      </Button> */}
     </div>
-  )
+  );
 }
-
