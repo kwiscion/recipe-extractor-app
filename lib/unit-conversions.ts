@@ -1,10 +1,21 @@
 import { formatQuantity } from "@/lib/format-quantity";
 import type { AlternativeMeasurement } from "@/lib/types";
 
-type Unit = "tsp" | "tbsp" | "ml" | "l" | "g" | "kg" | "oz" | "lb";
+type Unit =
+  | "tsp"
+  | "tbsp"
+  | "ml"
+  | "l"
+  | "g"
+  | "kg"
+  | "oz"
+  | "lb"
+  | "dag"
+  | "cup-pl";
 
 function normalizeUnit(input: string): Unit | null {
-  const u = input.trim().toLowerCase();
+  const u0 = input.trim().toLowerCase();
+  const u = u0.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // strip diacritics
   if (!u) return null;
 
   // volume
@@ -13,13 +24,47 @@ function normalizeUnit(input: string): Unit | null {
   if (u === "ml" || u === "milliliter" || u === "milliliters") return "ml";
   if (u === "l" || u === "lt" || u === "liter" || u === "liters") return "l";
 
+  // Polish volume units (common)
+  if (
+    u === "lyzeczka" ||
+    u === "lyzeczki" ||
+    u === "lyzeczke" ||
+    u === "lyzecz." ||
+    u === "lyz." ||
+    u === "lyzec"
+  )
+    return "tsp";
+  if (
+    u === "lyzka" ||
+    u === "lyzki" ||
+    u === "lyzke" ||
+    u === "lyz." ||
+    u === "lyzka." ||
+    u === "lyz"
+  )
+    return "tbsp";
+  if (u === "szklanka" || u === "szklanki" || u === "szkl.") return "cup-pl";
+
   // weight
   if (u === "g" || u === "gram" || u === "grams") return "g";
   if (u === "kg" || u === "kilogram" || u === "kilograms") return "kg";
   if (u === "oz" || u === "ounce" || u === "ounces") return "oz";
   if (u === "lb" || u === "lbs" || u === "pound" || u === "pounds") return "lb";
+  if (u === "dag" || u === "dkg") return "dag";
 
   return null;
+}
+
+function isPolishUnitString(input: string): boolean {
+  const s = input.toLowerCase();
+  return (
+    s.includes("ły") ||
+    s.includes("lyz") ||
+    s.includes("szkl") ||
+    s.includes("szt") ||
+    s.includes("dag") ||
+    s.includes("dkg")
+  );
 }
 
 function roundTo(value: number, step: number): number {
@@ -66,24 +111,45 @@ export function getAlternativeMeasurements(
   const unit = normalizeUnit(unitRaw);
   if (!unit) return [];
 
+  const prefersPolishUnits = isPolishUnitString(unitRaw);
   const out: AlternativeMeasurement[] = [];
 
   // Volume conversions
   if (unit === "tsp") {
     out.push({ quantity: quantity * 5, unit: "ml", exact: true });
+    if (prefersPolishUnits) {
+      out.push({ quantity: quantity / 3, unit: "łyżka", exact: true });
+    }
   }
 
   if (unit === "tbsp") {
     out.push({ quantity: quantity * 15, unit: "ml", exact: true });
+    if (prefersPolishUnits) {
+      out.push({ quantity: quantity * 3, unit: "łyżeczka", exact: true });
+    }
   }
 
   if (unit === "ml") {
     if (quantity >= 1000)
       out.push({ quantity: quantity / 1000, unit: "l", exact: true });
+    if (prefersPolishUnits && quantity < 250) {
+      out.push({ quantity: quantity / 15, unit: "łyżka", exact: true });
+      out.push({ quantity: quantity / 5, unit: "łyżeczka", exact: true });
+    }
   }
 
   if (unit === "l") {
     out.push({ quantity: quantity * 1000, unit: "ml", exact: true });
+  }
+
+  // Polish cup convention (typical: 1 szklanka ≈ 250 ml) — mark as estimate
+  if (unit === "cup-pl") {
+    out.push({
+      quantity: quantity * 250,
+      unit: "ml",
+      exact: false,
+      note: "typowo 1 szklanka ≈ 250 ml",
+    });
   }
 
   // Weight conversions
@@ -94,6 +160,10 @@ export function getAlternativeMeasurements(
 
   if (unit === "kg") {
     out.push({ quantity: quantity * 1000, unit: "g", exact: true });
+  }
+
+  if (unit === "dag") {
+    out.push({ quantity: quantity * 10, unit: "g", exact: true });
   }
 
   if (unit === "oz") {

@@ -17,13 +17,21 @@ const recipeSchema = z.object({
     z.object({
       name: z.string(),
       quantity: z.number().describe("Decimal number (e.g. 0.5 for 1/2)"),
-      unit: z.string().describe("Unit (e.g. cups, tbsp, g, pieces)"),
+      unit: z
+        .string()
+        .describe(
+          "Unit as used in the source recipe language (e.g. g, kg, ml, l, łyżka, łyżeczka, szklanka, szt.)"
+        ),
       notes: z.string().optional().describe("Optional notes like 'diced'"),
       alternatives: z
         .array(
           z.object({
             quantity: z.number().describe("Decimal number (e.g. 0.5 for 1/2)"),
-            unit: z.string().describe("Unit (e.g. cups, tbsp, g, pieces)"),
+            unit: z
+              .string()
+              .describe(
+                "Alternative unit (keep the recipe's measurement system; keep language consistent)"
+              ),
             exact: z
               .boolean()
               .describe(
@@ -74,7 +82,11 @@ const ingredientAlternativesSchema = z.object({
       alternatives: z.array(
         z.object({
           quantity: z.number().describe("Decimal number (e.g. 0.5 for 1/2)"),
-          unit: z.string().describe("Unit (e.g. cups, tbsp, g, pieces)"),
+          unit: z
+            .string()
+            .describe(
+              "Unit (keep measurement system aligned with the recipe; keep language consistent)"
+            ),
           exact: z
             .boolean()
             .describe(
@@ -215,7 +227,7 @@ export async function extractRecipe(
     model,
     output: Output.object({ schema: recipeSchema }),
     system:
-      "You are a recipe extraction assistant. Extract the recipe from the provided content. IMPORTANT: Keep the original language of the recipe. Do not translate.",
+      "You are a recipe extraction assistant. Extract the recipe from the provided content. IMPORTANT: Keep the original language of the recipe. Do not translate. Preserve measurement conventions and units as used by the source.",
     prompt: `Extract the recipe from this content:\n\n${truncatedContent}\n\n
       Guidelines:
       - Keep ALL text (title/description/ingredients/steps/warnings) in the same language as the source recipe. Do NOT translate.
@@ -223,6 +235,9 @@ export async function extractRecipe(
       - For items like "2-3 cloves", use the lower number (2) and add the range in notes.
       - Preserve measurement units as used in the source recipe (do not convert unit systems).
       - Do NOT introduce imperial units (cups/oz/lb) unless they appear in the source recipe.
+      - If the recipe is Polish, prefer metric units (g/kg/ml/l) and common Polish units/abbreviations (e.g. łyżka, łyżeczka, szklanka, szt.). Do not introduce imperial.
+      - Keep units consistent across ingredients (don't mix systems unnecessarily).
+      - "warnings" should reflect the original-language cues (e.g. allergens, equipment, advance prep, chilling/resting time).
       - If servings aren't specified, estimate based on the recipe.`,
     temperature: 0.1,
   });
@@ -235,7 +250,7 @@ export async function extractRecipe(
       model,
       output: Output.object({ schema: ingredientAlternativesSchema }),
       system:
-        "You are a precise cooking assistant. Given ingredients with quantities and units, propose useful alternative measurements.",
+        "You are a precise cooking assistant. Given ingredients with quantities and units, propose useful alternative measurements. IMPORTANT: Keep the original language and measurement conventions of the recipe; do not translate.",
       prompt: `For each ingredient, propose up to 3 alternative measurements that are useful while cooking.
 
 Rules:
@@ -246,6 +261,7 @@ Rules:
 - Do NOT introduce a different measurement system than the recipe uses.
   - If the ingredient list is metric (g/ml/l/kg), DO NOT output imperial units (cups/oz/lb).
   - If the ingredient list uses imperial (cups/oz/lb), you MAY include metric equivalents (g/ml) as helpful alternatives.
+- For Polish recipes, prefer Polish units/abbreviations where appropriate (e.g. łyżeczka, łyżka, szklanka) and metric units (g, ml, l). Do not introduce imperial.
 - If converting between volume and weight (e.g., tbsp flour -> grams), set exact=false and include a short note like "approx; depends on packing/brand".
 - For deterministic conversions (e.g., tbsp -> ml, oz -> g, l <-> ml, kg <-> g) set exact=true.
 - Do not repeat the original unit (don't include alternatives that are the same as the original unit).
