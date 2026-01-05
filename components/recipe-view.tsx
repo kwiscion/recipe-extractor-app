@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ServingsAdjuster } from "@/components/servings-adjuster";
 import { IngredientList } from "@/components/ingredient-list";
 import { RecipeSteps } from "@/components/recipe-steps";
 import { WarningsSection } from "@/components/warnings-section";
 import { ScreenWakeLock } from "@/components/screen-wake-lock";
+import { CookingMode } from "@/components/cooking-mode";
 import type { Recipe } from "@/lib/types";
 
 interface RecipeViewProps {
@@ -17,6 +18,8 @@ interface RecipeViewProps {
 
 export function RecipeView({ recipe, onBack }: RecipeViewProps) {
   const [servings, setServings] = useState(recipe.baseServings);
+  const [mode, setMode] = useState<"overview" | "cooking">("overview");
+  const [cookingStepIndex, setCookingStepIndex] = useState(0);
   const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(
     () => new Set()
   );
@@ -47,6 +50,32 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
       return next;
     });
   };
+
+  const startCooking = () => {
+    // Start at the first incomplete step if we can; otherwise start at step 0.
+    const firstIncomplete = recipe.steps.findIndex(
+      (_, i) => !completedSteps.has(i)
+    );
+    setCookingStepIndex(firstIncomplete >= 0 ? firstIncomplete : 0);
+    setMode("cooking");
+  };
+
+  if (mode === "cooking") {
+    return (
+      <CookingMode
+        recipe={recipe}
+        servings={servings}
+        onChangeServings={setServings}
+        checkedIngredients={checkedIngredients}
+        onToggleIngredient={toggleIngredient}
+        completedSteps={completedSteps}
+        onToggleStepComplete={toggleStepCompleted}
+        stepIndex={cookingStepIndex}
+        onChangeStepIndex={setCookingStepIndex}
+        onExit={() => setMode("overview")}
+      />
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background">
@@ -108,6 +137,18 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
               checkedIngredients={checkedIngredients}
               onToggleIngredient={toggleIngredient}
             />
+          </div>
+
+          {/* Start cooking */}
+          <div className="flex justify-center">
+            <Button
+              size="lg"
+              className="h-14 w-full sm:w-auto px-8 text-base"
+              onClick={startCooking}
+            >
+              <Play className="size-5" />
+              Start Cooking
+            </Button>
           </div>
 
           {/* Steps */}

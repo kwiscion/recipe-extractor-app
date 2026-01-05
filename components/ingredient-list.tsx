@@ -9,6 +9,7 @@ interface IngredientListProps {
   currentServings: number
   checkedIngredients?: Set<number>
   onToggleIngredient?: (index: number) => void
+  showHeading?: boolean
 }
 
 export function IngredientList({
@@ -17,12 +18,13 @@ export function IngredientList({
   currentServings,
   checkedIngredients,
   onToggleIngredient,
+  showHeading = true,
 }: IngredientListProps) {
   const scale = currentServings / baseServings
 
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-semibold text-foreground">Ingredients</h2>
+      {showHeading && <h2 className="text-lg font-semibold text-foreground">Ingredients</h2>}
       <ul className="space-y-2">
         {ingredients.map((ingredient, index) => {
           const formattedQty = formatQuantity(ingredient.quantity, scale)
