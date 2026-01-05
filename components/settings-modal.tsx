@@ -14,7 +14,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectGroup,
+  SelectLabel,
+} from "@/components/ui/select";
 import { getSettings, saveSettings } from "@/lib/storage";
+import { LLM_MODELS } from "@/lib/types";
 import type { AppSettings, ProviderApiKeys } from "@/lib/types";
 
 interface SettingsModalProps {
@@ -32,6 +42,7 @@ export function SettingsModal({
   const [openaiKey, setOpenaiKey] = useState("");
   const [googleKey, setGoogleKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
+  const [selectedModel, setSelectedModel] = useState("");
 
   // Load existing keys on mount
   useEffect(() => {
@@ -42,6 +53,7 @@ export function SettingsModal({
         setOpenaiKey(existing.providerKeys.openai || "");
         setGoogleKey(existing.providerKeys.google || "");
         setAnthropicKey(existing.providerKeys.anthropic || "");
+        setSelectedModel(existing.selectedModel || "");
       }
     }
   }, [open]);
@@ -59,12 +71,12 @@ export function SettingsModal({
       providerKeys.anthropic = anthropicKey.trim();
     }
 
-    // Get existing settings to preserve selected model
+    // Get existing settings to preserve other settings
     const existing = getSettings();
     const settings: AppSettings = {
       firecrawl: firecrawlKey.trim(),
       providerKeys,
-      selectedModel: existing?.selectedModel || "gpt-4o",
+      selectedModel: selectedModel || existing?.selectedModel || "gpt-4o",
     };
 
     saveSettings(settings);
@@ -75,6 +87,27 @@ export function SettingsModal({
   const isValid =
     firecrawlKey.trim() &&
     (openaiKey.trim() || googleKey.trim() || anthropicKey.trim());
+
+  // Filter models based on entered API keys
+  const availableModels = LLM_MODELS.filter((model) => {
+    if (model.provider === "openai") return openaiKey.trim();
+    if (model.provider === "google") return googleKey.trim();
+    if (model.provider === "anthropic") return anthropicKey.trim();
+    return false;
+  });
+
+  // Group models by provider
+  const openaiModels = availableModels.filter((m) => m.provider === "openai");
+  const googleModels = availableModels.filter((m) => m.provider === "google");
+  const anthropicModels = availableModels.filter(
+    (m) => m.provider === "anthropic"
+  );
+
+  // Ensure selected model is valid, fallback to first available or default
+  const currentModelValue =
+    selectedModel && availableModels.some((m) => m.id === selectedModel)
+      ? selectedModel
+      : availableModels[0]?.id || "";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -211,6 +244,69 @@ export function SettingsModal({
                 Get your key at console.anthropic.com
               </p>
             </div> */}
+          </div>
+
+          {/* Model Selector */}
+          <div className="border-t pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="model-select">Default Model</Label>
+              <Select
+                value={currentModelValue}
+                onValueChange={setSelectedModel}
+                disabled={availableModels.length === 0}
+              >
+                <SelectTrigger id="model-select" className="w-full">
+                  <SelectValue
+                    placeholder={
+                      availableModels.length === 0
+                        ? "Add API keys to select a model"
+                        : "Select a model"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {openaiModels.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>OpenAI</SelectLabel>
+                      {openaiModels.map((model) => (
+                        <SelectItem key={model.id} value={model.id}>
+                          {model.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {googleModels.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>Google</SelectLabel>
+                      {googleModels.map((model) => (
+                        <SelectItem key={model.id} value={model.id}>
+                          {model.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {anthropicModels.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>Anthropic</SelectLabel>
+                      {anthropicModels.map((model) => (
+                        <SelectItem key={model.id} value={model.id}>
+                          {model.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {availableModels.length === 0 && (
+                    <div className="p-2 text-sm text-muted-foreground text-center">
+                      No models available. Add API keys above.
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Select the default model to use for recipe extraction. Only
+                models with configured API keys are shown.
+              </p>
+            </div>
           </div>
         </div>
 
