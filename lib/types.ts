@@ -12,8 +12,12 @@ export const LLM_MODELS: LLMModel[] = [
   { id: "gpt-4.1", name: "GPT-4.1", provider: "openai" },
   { id: "gpt-5.2", name: "GPT-5.2", provider: "openai" },
   // Google
-  { id: "gemini-3.0-flash", name: "Gemini 3.0 Flash", provider: "google" },
-  { id: "gemini-3.0-pro", name: "Gemini 3.0 Pro", provider: "google" },
+  {
+    id: "gemini-3-flash-preview",
+    name: "Gemini 3.0 Flash",
+    provider: "google",
+  },
+  { id: "gemini-3-pro-preview", name: "Gemini 3.0 Pro", provider: "google" },
   // Anthropic
   {
     id: "claude-sonnet-4-5",
