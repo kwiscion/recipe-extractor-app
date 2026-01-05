@@ -3,7 +3,7 @@ import { generateObject, generateText, Output } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createAnthropic } from "@ai-sdk/anthropic";
-import type { Recipe, ApiKeys } from "./types";
+import type { Recipe, ApiKeys, AlternativeMeasurement } from "./types";
 
 // 1. Define the schema exactly as you want the data structure
 // This replaces the manual "EXTRACTION_PROMPT" and JSON parsing logic
@@ -19,6 +19,28 @@ const recipeSchema = z.object({
       quantity: z.number().describe("Decimal number (e.g. 0.5 for 1/2)"),
       unit: z.string().describe("Unit (e.g. cups, tbsp, g, pieces)"),
       notes: z.string().optional().describe("Optional notes like 'diced'"),
+      alternatives: z
+        .array(
+          z.object({
+            quantity: z.number().describe("Decimal number (e.g. 0.5 for 1/2)"),
+            unit: z.string().describe("Unit (e.g. cups, tbsp, g, pieces)"),
+            exact: z
+              .boolean()
+              .describe(
+                "True for deterministic conversions, false for estimates"
+              ),
+            note: z
+              .string()
+              .optional()
+              .describe(
+                "Optional qualifier (e.g. 'approx; depends on packing/brand')"
+              ),
+          })
+        )
+        .optional()
+        .describe(
+          "Optional alternative measurements for the BASE quantity/unit"
+        ),
     })
   ),
   steps: z.array(
@@ -45,6 +67,70 @@ const recipeSchema = z.object({
       "Allergens, equipment needed, prep time requirements, or advance prep"
     ),
 });
+
+const ingredientAlternativesSchema = z.object({
+  ingredients: z.array(
+    z.object({
+      alternatives: z.array(
+        z.object({
+          quantity: z.number().describe("Decimal number (e.g. 0.5 for 1/2)"),
+          unit: z.string().describe("Unit (e.g. cups, tbsp, g, pieces)"),
+          exact: z
+            .boolean()
+            .describe(
+              "True for deterministic conversions, false for estimates"
+            ),
+          note: z
+            .string()
+            .optional()
+            .describe(
+              "Optional qualifier (e.g. 'approx; depends on packing/brand')"
+            ),
+        })
+      ),
+    })
+  ),
+});
+
+function mergeIngredientAlternatives(
+  baseIngredients: Array<{
+    name: string;
+    quantity: number;
+    unit: string;
+    notes?: string;
+    alternatives?: AlternativeMeasurement[];
+  }>,
+  enriched: unknown
+) {
+  const parsed = ingredientAlternativesSchema.safeParse(enriched);
+  if (!parsed.success) return baseIngredients;
+  if (parsed.data.ingredients.length !== baseIngredients.length)
+    return baseIngredients;
+
+  return baseIngredients.map((ing, i) => {
+    const rawAlts = parsed.data.ingredients[i]?.alternatives ?? [];
+    const alts: AlternativeMeasurement[] = rawAlts
+      .filter(
+        (a) =>
+          Number.isFinite(a.quantity) &&
+          a.quantity > 0 &&
+          typeof a.unit === "string" &&
+          a.unit.trim().length > 0
+      )
+      .slice(0, 4)
+      .map((a) => ({
+        quantity: a.quantity,
+        unit: a.unit.trim(),
+        exact: Boolean(a.exact),
+        note: a.note?.trim() || undefined,
+      }));
+
+    return {
+      ...ing,
+      alternatives: alts.length ? alts : undefined,
+    };
+  });
+}
 
 // 2. Helper to initialize the correct provider
 function getModel(provider: string, modelId: string, apiKey: string) {
@@ -138,9 +224,52 @@ export async function extractRecipe(
     temperature: 0.1,
   });
 
+  // Step 3b: Enrich ingredient list with alternative measurements (best-effort)
+  // This is intentionally non-fatal: if it fails, we still return the recipe.
+  let enrichedIngredients = result.output.ingredients;
+  try {
+    const alternativesResult = await generateText({
+      model,
+      output: Output.object({ schema: ingredientAlternativesSchema }),
+      system:
+        "You are a precise cooking assistant. Given ingredients with quantities and units, propose useful alternative measurements.",
+      prompt: `For each ingredient, propose up to 3 alternative measurements that are useful while cooking.
+
+Rules:
+- Return JSON only, matching the provided schema exactly.
+- The output array length MUST exactly match the input ingredient list length and order.
+- Keep conversions conservative. If unsure, return an empty alternatives array for that ingredient.
+- If converting between volume and weight (e.g., tbsp flour -> grams), set exact=false and include a short note like "approx; depends on packing/brand".
+- For deterministic conversions (e.g., tbsp <-> ml, oz <-> g, l <-> ml) set exact=true.
+- Do not repeat the original unit (don't include alternatives that are the same as the original unit).
+
+Ingredients (base quantities):\n${JSON.stringify(
+        result.output.ingredients.map((i) => ({
+          name: i.name,
+          quantity: i.quantity,
+          unit: i.unit,
+          notes: i.notes,
+        })),
+        null,
+        2
+      )}`,
+      temperature: 0.1,
+    });
+
+    console.log(alternativesResult.output);
+
+    enrichedIngredients = mergeIngredientAlternatives(
+      result.output.ingredients,
+      alternativesResult.output
+    );
+  } catch {
+    // ignore (best-effort)
+  }
+
   // Step 4: Return formatted recipe
   return {
     ...result.output,
+    ingredients: enrichedIngredients,
     id: crypto.randomUUID(),
     sourceUrl: url,
     extractedAt: new Date().toISOString(),

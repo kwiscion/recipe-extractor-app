@@ -1,21 +1,7 @@
 import { formatQuantity } from "@/lib/format-quantity";
+import type { AlternativeMeasurement } from "@/lib/types";
 
-export type AlternativeMeasurement = {
-  value: number;
-  unit: string;
-  exact: boolean;
-  note?: string;
-};
-
-type Unit =
-  | "tsp"
-  | "tbsp"
-  | "ml"
-  | "l"
-  | "g"
-  | "kg"
-  | "oz"
-  | "lb";
+type Unit = "tsp" | "tbsp" | "ml" | "l" | "g" | "kg" | "oz" | "lb";
 
 function normalizeUnit(input: string): Unit | null {
   const u = input.trim().toLowerCase();
@@ -46,7 +32,9 @@ export function formatAltValue(value: number, unit: string): string {
   // Metric units: prefer decimals, not fractions.
   if (u === "ml") {
     const rounded = value >= 50 ? roundTo(value, 1) : roundTo(value, 0.5);
-    return rounded % 1 === 0 ? `${rounded.toFixed(0)}` : `${rounded.toFixed(1).replace(/\.0$/, "")}`;
+    return rounded % 1 === 0
+      ? `${rounded.toFixed(0)}`
+      : `${rounded.toFixed(1).replace(/\.0$/, "")}`;
   }
   if (u === "l") {
     const rounded = roundTo(value, 0.01);
@@ -54,7 +42,9 @@ export function formatAltValue(value: number, unit: string): string {
   }
   if (u === "g") {
     const rounded = value >= 50 ? roundTo(value, 1) : roundTo(value, 0.5);
-    return rounded % 1 === 0 ? `${rounded.toFixed(0)}` : `${rounded.toFixed(1).replace(/\.0$/, "")}`;
+    return rounded % 1 === 0
+      ? `${rounded.toFixed(0)}`
+      : `${rounded.toFixed(1).replace(/\.0$/, "")}`;
   }
   if (u === "kg") {
     const rounded = roundTo(value, 0.01);
@@ -70,7 +60,7 @@ export function formatAltValue(value: number, unit: string): string {
  */
 export function getAlternativeMeasurements(
   quantity: number,
-  unitRaw: string,
+  unitRaw: string
 ): AlternativeMeasurement[] {
   if (!Number.isFinite(quantity) || quantity <= 0) return [];
   const unit = normalizeUnit(unitRaw);
@@ -80,45 +70,56 @@ export function getAlternativeMeasurements(
 
   // Volume conversions
   if (unit === "tsp") {
-    out.push({ value: quantity * 5, unit: "ml", exact: true });
+    out.push({ quantity: quantity * 5, unit: "ml", exact: true });
     // Helpful also: tbsp
-    out.push({ value: quantity / 3, unit: "tbsp", exact: true });
+    out.push({ quantity: quantity / 3, unit: "tbsp", exact: true });
   }
 
   if (unit === "tbsp") {
-    out.push({ value: quantity * 15, unit: "ml", exact: true });
-    out.push({ value: quantity * 3, unit: "tsp", exact: true });
+    out.push({ quantity: quantity * 15, unit: "ml", exact: true });
+    out.push({ quantity: quantity * 3, unit: "tsp", exact: true });
   }
 
   if (unit === "ml") {
-    out.push({ value: quantity / 15, unit: "tbsp", exact: true });
-    out.push({ value: quantity / 5, unit: "tsp", exact: true });
-    if (quantity >= 1000) out.push({ value: quantity / 1000, unit: "l", exact: true });
+    out.push({ quantity: quantity / 15, unit: "tbsp", exact: true });
+    out.push({ quantity: quantity / 5, unit: "tsp", exact: true });
+    if (quantity >= 1000)
+      out.push({ quantity: quantity / 1000, unit: "l", exact: true });
   }
 
   if (unit === "l") {
-    out.push({ value: quantity * 1000, unit: "ml", exact: true });
+    out.push({ quantity: quantity * 1000, unit: "ml", exact: true });
   }
 
   // Weight conversions
   if (unit === "g") {
-    out.push({ value: quantity / 28.349523125, unit: "oz", exact: true });
-    if (quantity >= 1000) out.push({ value: quantity / 1000, unit: "kg", exact: true });
-    if (quantity >= 453.592) out.push({ value: quantity / 453.59237, unit: "lb", exact: true });
+    out.push({ quantity: quantity / 28.349523125, unit: "oz", exact: true });
+    if (quantity >= 1000)
+      out.push({ quantity: quantity / 1000, unit: "kg", exact: true });
+    if (quantity >= 453.592)
+      out.push({ quantity: quantity / 453.59237, unit: "lb", exact: true });
   }
 
   if (unit === "kg") {
-    out.push({ value: quantity * 1000, unit: "g", exact: true });
-    out.push({ value: (quantity * 1000) / 28.349523125, unit: "oz", exact: true });
-    out.push({ value: (quantity * 1000) / 453.59237, unit: "lb", exact: true });
+    out.push({ quantity: quantity * 1000, unit: "g", exact: true });
+    out.push({
+      quantity: (quantity * 1000) / 28.349523125,
+      unit: "oz",
+      exact: true,
+    });
+    out.push({
+      quantity: (quantity * 1000) / 453.59237,
+      unit: "lb",
+      exact: true,
+    });
   }
 
   if (unit === "oz") {
-    out.push({ value: quantity * 28.349523125, unit: "g", exact: true });
+    out.push({ quantity: quantity * 28.349523125, unit: "g", exact: true });
   }
 
   if (unit === "lb") {
-    out.push({ value: quantity * 453.59237, unit: "g", exact: true });
+    out.push({ quantity: quantity * 453.59237, unit: "g", exact: true });
   }
 
   // De-dupe units (keep first)
@@ -133,5 +134,3 @@ export function getAlternativeMeasurements(
   // Keep list short
   return deduped.slice(0, 3);
 }
-
-

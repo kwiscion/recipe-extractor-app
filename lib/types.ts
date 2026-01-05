@@ -28,11 +28,29 @@ export const LLM_MODELS: LLMModel[] = [
   { id: "claude-haiku-4-5", name: "Claude 4.5 Haiku", provider: "anthropic" },
 ];
 
+export type AlternativeMeasurement = {
+  quantity: number;
+  unit: string;
+  /**
+   * true for deterministic conversions (e.g. tbsp ↔ ml), false for estimates (e.g. tbsp flour ↔ grams)
+   */
+  exact: boolean;
+  /**
+   * Optional qualifier (e.g. "approx; depends on packing/brand")
+   */
+  note?: string;
+};
+
 export interface Ingredient {
   name: string;
   quantity: number;
   unit: string;
   notes?: string;
+  /**
+   * Alternative measurements for the BASE quantity/unit (not scaled for servings).
+   * These will be scaled client-side with the same servings ratio.
+   */
+  alternatives?: AlternativeMeasurement[];
 }
 
 export interface RecipeStep {

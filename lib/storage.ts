@@ -1,6 +1,26 @@
-import type { ApiKeys, Recipe } from "./types"
+import type { ApiKeys, Recipe, AlternativeMeasurement } from "./types"
 
 function normalizeRecipe(recipe: any): Recipe {
+  const ingredients = Array.isArray(recipe?.ingredients)
+    ? recipe.ingredients.map((ing: any) => {
+        const altsRaw = Array.isArray(ing?.alternatives) ? ing.alternatives : []
+        const alternatives: AlternativeMeasurement[] = altsRaw
+          .filter((a: any) => Number.isFinite(a?.value) && a.value > 0 && typeof a?.unit === "string" && a.unit.trim().length > 0)
+          .slice(0, 6)
+          .map((a: any) => ({
+            value: a.value,
+            unit: a.unit.trim(),
+            exact: Boolean(a.exact),
+            note: typeof a.note === "string" ? a.note.trim() || undefined : undefined,
+          }))
+
+        return {
+          ...ing,
+          alternatives: alternatives.length ? alternatives : undefined,
+        }
+      })
+    : []
+
   const steps = Array.isArray(recipe?.steps)
     ? recipe.steps.map((step: any) => {
         const title = (step?.title ?? step?.summary ?? "").toString().trim()
@@ -16,6 +36,7 @@ function normalizeRecipe(recipe: any): Recipe {
 
   return {
     ...recipe,
+    ingredients,
     steps,
   } as Recipe
 }
