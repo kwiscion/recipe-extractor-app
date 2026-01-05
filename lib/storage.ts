@@ -1,4 +1,11 @@
-import type { ApiKeys, Recipe, AlternativeMeasurement } from "./types";
+import type {
+  ApiKeys,
+  AppSettings,
+  Recipe,
+  AlternativeMeasurement,
+  ProviderApiKeys,
+} from "./types";
+import { getProviderForModel } from "./types";
 
 function normalizeRecipe(recipe: any): Recipe {
   const ingredients = Array.isArray(recipe?.ingredients)
@@ -55,7 +62,8 @@ function normalizeRecipe(recipe: any): Recipe {
 }
 
 const STORAGE_KEYS = {
-  API_KEYS: "recipe-extractor-api-keys",
+  API_KEYS: "recipe-extractor-api-keys", // Legacy key
+  SETTINGS: "recipe-extractor-settings-v2",
   RECIPES: "recipe-extractor-recipes",
   PROGRESS: "recipe-extractor-progress-v1",
   CURRENT_SESSION: "recipe-extractor-current-session",
@@ -123,7 +131,57 @@ export function clearRecipeProgress(recipeId: string): void {
   }
 }
 
-export function getApiKeys(): ApiKeys | null {
+// New settings functions
+export function getSettings(): AppSettings | null {
+  if (typeof window === "undefined") return null;
+
+  // Try new format first
+  const stored = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+  if (stored) {
+    try {
+      return JSON.parse(stored) as AppSettings;
+    } catch {
+      // Fall through to migration
+    }
+  }
+
+  // Try to migrate from old format
+  const legacy = getApiKeysLegacy();
+  if (legacy) {
+    const migrated: AppSettings = {
+      firecrawl: legacy.firecrawl,
+      providerKeys: {
+        [legacy.llmProvider]: legacy.llmKey,
+      },
+      selectedModel: legacy.llmModel,
+    };
+    saveSettings(migrated);
+    return migrated;
+  }
+
+  return null;
+}
+
+export function saveSettings(settings: AppSettings): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+}
+
+export function getSelectedModel(): string | null {
+  const settings = getSettings();
+  return settings?.selectedModel || null;
+}
+
+export function setSelectedModel(modelId: string): void {
+  const settings = getSettings();
+  if (settings) {
+    settings.selectedModel = modelId;
+    saveSettings(settings);
+  }
+}
+
+// Legacy functions for backward compatibility
+function getApiKeysLegacy(): ApiKeys | null {
   if (typeof window === "undefined") return null;
   const stored = localStorage.getItem(STORAGE_KEYS.API_KEYS);
   if (!stored) return null;
@@ -134,8 +192,35 @@ export function getApiKeys(): ApiKeys | null {
   }
 }
 
+export function getApiKeys(): ApiKeys | null {
+  // Try to get settings and convert to old format
+  const settings = getSettings();
+  if (!settings) return null;
+
+  const provider = getProviderForModel(settings.selectedModel);
+  if (!provider) return null;
+
+  const llmKey = settings.providerKeys[provider];
+  if (!llmKey) return null;
+
+  return {
+    firecrawl: settings.firecrawl,
+    llmProvider: provider,
+    llmModel: settings.selectedModel,
+    llmKey,
+  };
+}
+
 export function saveApiKeys(keys: ApiKeys): void {
-  localStorage.setItem(STORAGE_KEYS.API_KEYS, JSON.stringify(keys));
+  // Convert to new format
+  const settings: AppSettings = {
+    firecrawl: keys.firecrawl,
+    providerKeys: {
+      [keys.llmProvider]: keys.llmKey,
+    },
+    selectedModel: keys.llmModel,
+  };
+  saveSettings(settings);
 }
 
 export function getRecipes(): Recipe[] {
@@ -184,7 +269,10 @@ export function getCurrentSession(): CurrentSession | null {
   }
 }
 
-export function saveCurrentSession(recipeId: string, mode: "overview" | "cooking"): void {
+export function saveCurrentSession(
+  recipeId: string,
+  mode: "overview" | "cooking"
+): void {
   if (typeof window === "undefined") return;
   const session: CurrentSession = {
     recipeId,

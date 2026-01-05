@@ -81,9 +81,36 @@ export interface Recipe {
 
 export type RecipeResponse = Omit<Recipe, "id" | "sourceUrl" | "extractedAt">;
 
+export interface ProviderApiKeys {
+  openai?: string;
+  google?: string;
+  anthropic?: string;
+}
+
+export interface AppSettings {
+  firecrawl: string;
+  providerKeys: ProviderApiKeys;
+  selectedModel: string; // model ID like "gpt-4o"
+}
+
+// Legacy type for backward compatibility
 export interface ApiKeys {
   firecrawl: string;
   llmProvider: LLMProvider;
   llmModel: string;
   llmKey: string;
+}
+
+// Helper to get provider from model ID
+export function getProviderForModel(modelId: string): LLMProvider | null {
+  const model = LLM_MODELS.find((m) => m.id === modelId);
+  return model ? model.provider : null;
+}
+
+// Helper to get available models based on configured provider keys
+export function getAvailableModels(providerKeys: ProviderApiKeys): LLMModel[] {
+  return LLM_MODELS.filter((model) => {
+    const key = providerKeys[model.provider];
+    return key && key.trim().length > 0;
+  });
 }

@@ -3,7 +3,8 @@ import { generateObject, generateText, Output } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createAnthropic } from "@ai-sdk/anthropic";
-import type { Recipe, ApiKeys, AlternativeMeasurement } from "./types";
+import type { Recipe, AppSettings, AlternativeMeasurement } from "./types";
+import { getProviderForModel } from "./types";
 
 // 1. Define the schema exactly as you want the data structure
 // This replaces the manual "EXTRACTION_PROMPT" and JSON parsing logic
@@ -206,10 +207,21 @@ async function scrapeWithFirecrawl(
 
 export async function extractRecipe(
   url: string,
-  keys: ApiKeys
+  settings: AppSettings
 ): Promise<Recipe> {
-  // Step 1: Scrape the page
-  const content = await scrapeWithFirecrawl(url, keys.firecrawl);
+  // Step 1: Get the provider and API key for the selected model
+  const provider = getProviderForModel(settings.selectedModel);
+  if (!provider) {
+    throw new Error(`Invalid model: ${settings.selectedModel}`);
+  }
+
+  const llmKey = settings.providerKeys[provider];
+  if (!llmKey) {
+    throw new Error(`API key not configured for ${provider}`);
+  }
+
+  // Step 2: Scrape the page
+  const content = await scrapeWithFirecrawl(url, settings.firecrawl);
 
   // Truncate content if too long (to avoid token limits)
   const maxChars = 20000;
@@ -218,10 +230,10 @@ export async function extractRecipe(
       ? content.slice(0, maxChars) + "\n\n[Content truncated...]"
       : content;
 
-  // Step 2: Initialize the model
-  const model = getModel(keys.llmProvider, keys.llmModel, keys.llmKey);
+  // Step 3: Initialize the model
+  const model = getModel(provider, settings.selectedModel, llmKey);
 
-  // Step 3: Extract structured data
+  // Step 4: Extract structured data
   // generateObject handles the prompting for structure, JSON parsing, and validation automatically
   const result = await generateText({
     model,
@@ -242,7 +254,7 @@ export async function extractRecipe(
     temperature: 0.1,
   });
 
-  // Step 3b: Enrich ingredient list with alternative measurements (best-effort)
+  // Step 5: Enrich ingredient list with alternative measurements (best-effort)
   // This is intentionally non-fatal: if it fails, we still return the recipe.
   let enrichedIngredients = result.output.ingredients;
   try {
@@ -287,7 +299,7 @@ Ingredients (base quantities):\n${JSON.stringify(
     // ignore (best-effort)
   }
 
-  // Step 4: Return formatted recipe
+  // Step 6: Return formatted recipe
   return {
     ...result.output,
     ingredients: enrichedIngredients,

@@ -4,19 +4,22 @@ import { useState, useEffect } from "react";
 import { Scale, ListChecks, AlertTriangle, Sparkles } from "lucide-react";
 import { UrlInput } from "@/components/url-input";
 import { FeatureCard } from "@/components/feature-card";
-import { ApiKeysModal } from "@/components/api-keys-modal";
+import { SettingsModal } from "@/components/settings-modal";
+import { ModelSelector } from "@/components/model-selector";
 import { CookingLoader } from "@/components/cooking-loader";
 import { RecipeView } from "@/components/recipe-view";
 import { RecipeHistory } from "@/components/recipe-history";
 import {
-  getApiKeys,
+  getSettings,
+  saveSettings,
   getRecipes,
   saveRecipe,
   getCurrentSession,
   clearCurrentSession,
 } from "@/lib/storage";
 import { extractRecipe } from "@/lib/extract-recipe";
-import type { Recipe, ApiKeys } from "@/lib/types";
+import type { Recipe, AppSettings, ProviderApiKeys } from "@/lib/types";
+import { getProviderForModel, getAvailableModels } from "@/lib/types";
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 
@@ -48,17 +51,22 @@ const features = [
 ];
 
 export default function HomePage() {
-  const [showApiModal, setShowApiModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingRecipe, setIsLoadingRecipe] = useState(false);
   const [currentRecipe, setCurrentRecipe] = useState<Recipe | null>(null);
   const [savedRecipes, setSavedRecipes] = useState<Recipe[]>([]);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     const recipes = getRecipes();
     setSavedRecipes(recipes);
+
+    // Load settings
+    const loadedSettings = getSettings();
+    setSettings(loadedSettings);
 
     // Auto-restore current session if exists
     const session = getCurrentSession();
@@ -72,28 +80,56 @@ export default function HomePage() {
   }, []);
 
   const handleUrlSubmit = async (url: string) => {
-    const keys = getApiKeys();
-    if (!keys) {
+    if (!settings) {
       setPendingUrl(url);
-      setShowApiModal(true);
+      setShowSettingsModal(true);
+      toast({
+        variant: "destructive",
+        title: "Settings Required",
+        description: "Please configure your API keys first.",
+      });
       return;
     }
-    await processRecipe(url, keys);
+
+    // Check if selected model has API key
+    const provider = getProviderForModel(settings.selectedModel);
+    if (!provider || !settings.providerKeys[provider]) {
+      setShowSettingsModal(true);
+      toast({
+        variant: "destructive",
+        title: "API Key Missing",
+        description: `Please add an API key for ${provider} or select a different model.`,
+      });
+      return;
+    }
+
+    await processRecipe(url, settings);
   };
 
-  const handleApiKeysSubmit = async (keys: ApiKeys) => {
-    setShowApiModal(false);
-    if (pendingUrl) {
-      await processRecipe(pendingUrl, keys);
+  const handleSettingsSaved = () => {
+    const loadedSettings = getSettings();
+    setSettings(loadedSettings);
+    
+    // If there was a pending URL, process it now
+    if (pendingUrl && loadedSettings) {
+      processRecipe(pendingUrl, loadedSettings);
       setPendingUrl(null);
     }
   };
 
-  const processRecipe = async (url: string, keys: ApiKeys) => {
+  const handleModelChange = (modelId: string) => {
+    if (settings) {
+      const updatedSettings = { ...settings, selectedModel: modelId };
+      saveSettings(updatedSettings);
+      setSettings(updatedSettings);
+    }
+  };
+
+  const processRecipe = async (url: string, currentSettings: AppSettings) => {
     setIsLoadingRecipe(true);
     setCurrentRecipe(null);
     try {
-      const recipe = await extractRecipe(url, keys);
+      const recipe = await extractRecipe(url, currentSettings);
       setCurrentRecipe(recipe);
       saveRecipe(recipe);
       setSavedRecipes(getRecipes());
@@ -166,7 +202,18 @@ export default function HomePage() {
         {isLoadingRecipe ? (
           <CookingLoader />
         ) : (
-          <UrlInput onSubmit={handleUrlSubmit} isLoading={isLoadingRecipe} />
+          <>
+            <UrlInput onSubmit={handleUrlSubmit} isLoading={isLoadingRecipe} />
+            {/* Model Selector */}
+            <div className="mt-4">
+              <ModelSelector
+                selectedModel={settings?.selectedModel || "gpt-4o"}
+                providerKeys={settings?.providerKeys || {}}
+                onModelChange={handleModelChange}
+                onOpenSettings={() => setShowSettingsModal(true)}
+              />
+            </div>
+          </>
         )}
 
         {/* Features */}
@@ -183,11 +230,11 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* API Keys Modal */}
-      <ApiKeysModal
-        open={showApiModal}
-        onOpenChange={setShowApiModal}
-        onSubmit={handleApiKeysSubmit}
+      {/* Settings Modal */}
+      <SettingsModal
+        open={showSettingsModal}
+        onOpenChange={setShowSettingsModal}
+        onSave={handleSettingsSaved}
       />
       <Toaster />
     </main>
