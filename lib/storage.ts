@@ -57,7 +57,71 @@ function normalizeRecipe(recipe: any): Recipe {
 const STORAGE_KEYS = {
   API_KEYS: "recipe-extractor-api-keys",
   RECIPES: "recipe-extractor-recipes",
+  PROGRESS: "recipe-extractor-progress-v1",
+  CURRENT_SESSION: "recipe-extractor-current-session",
 } as const;
+
+type CurrentSession = {
+  recipeId: string;
+  mode: "overview" | "cooking";
+  updatedAt: string;
+};
+
+type RecipeProgress = {
+  servings: number;
+  checkedIngredients: number[];
+  completedSteps: number[];
+  cookingStepIndex: number;
+  lastMode: "overview" | "cooking";
+  updatedAt: string;
+};
+
+function readProgressMap(): Record<string, RecipeProgress> {
+  if (typeof window === "undefined") return {};
+  const stored = localStorage.getItem(STORAGE_KEYS.PROGRESS);
+  if (!stored) return {};
+  try {
+    const parsed = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object") return {};
+    return parsed as Record<string, RecipeProgress>;
+  } catch {
+    return {};
+  }
+}
+
+function writeProgressMap(map: Record<string, RecipeProgress>): void {
+  localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(map));
+}
+
+export function getRecipeProgress(recipeId: string): RecipeProgress | null {
+  if (typeof window === "undefined") return null;
+  const map = readProgressMap();
+  const p = map[recipeId];
+  if (!p) return null;
+  return p;
+}
+
+export function saveRecipeProgress(
+  recipeId: string,
+  progress: Omit<RecipeProgress, "updatedAt">
+): void {
+  if (typeof window === "undefined") return;
+  const map = readProgressMap();
+  map[recipeId] = {
+    ...progress,
+    updatedAt: new Date().toISOString(),
+  };
+  writeProgressMap(map);
+}
+
+export function clearRecipeProgress(recipeId: string): void {
+  if (typeof window === "undefined") return;
+  const map = readProgressMap();
+  if (map[recipeId]) {
+    delete map[recipeId];
+    writeProgressMap(map);
+  }
+}
 
 export function getApiKeys(): ApiKeys | null {
   if (typeof window === "undefined") return null;
@@ -107,4 +171,30 @@ export function deleteRecipe(id: string): void {
   const recipes = getRecipes();
   const filtered = recipes.filter((r) => r.id !== id);
   localStorage.setItem(STORAGE_KEYS.RECIPES, JSON.stringify(filtered));
+}
+
+export function getCurrentSession(): CurrentSession | null {
+  if (typeof window === "undefined") return null;
+  const stored = localStorage.getItem(STORAGE_KEYS.CURRENT_SESSION);
+  if (!stored) return null;
+  try {
+    return JSON.parse(stored) as CurrentSession;
+  } catch {
+    return null;
+  }
+}
+
+export function saveCurrentSession(recipeId: string, mode: "overview" | "cooking"): void {
+  if (typeof window === "undefined") return;
+  const session: CurrentSession = {
+    recipeId,
+    mode,
+    updatedAt: new Date().toISOString(),
+  };
+  localStorage.setItem(STORAGE_KEYS.CURRENT_SESSION, JSON.stringify(session));
+}
+
+export function clearCurrentSession(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(STORAGE_KEYS.CURRENT_SESSION);
 }

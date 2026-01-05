@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft, ExternalLink, Play } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ExternalLink, Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ServingsAdjuster } from "@/components/servings-adjuster";
 import { IngredientList } from "@/components/ingredient-list";
@@ -10,6 +10,13 @@ import { WarningsSection } from "@/components/warnings-section";
 import { ScreenWakeLock } from "@/components/screen-wake-lock";
 import { CookingMode } from "@/components/cooking-mode";
 import type { Recipe } from "@/lib/types";
+import {
+  clearRecipeProgress,
+  getRecipeProgress,
+  saveRecipeProgress,
+  saveCurrentSession,
+  clearCurrentSession,
+} from "@/lib/storage";
 
 interface RecipeViewProps {
   recipe: Recipe;
@@ -26,6 +33,8 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(
     () => new Set()
   );
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [hasSavedProgress, setHasSavedProgress] = useState(false);
 
   const toggleIngredient = (index: number) => {
     setCheckedIngredients((prev) => {
@@ -59,6 +68,119 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
     setCookingStepIndex(firstIncomplete >= 0 ? firstIncomplete : 0);
     setMode("cooking");
   };
+
+  const startOverCooking = () => {
+    clearRecipeProgress(recipe.id);
+    setServings(recipe.baseServings);
+    setCheckedIngredients(new Set());
+    setCompletedSteps(new Set());
+    setCookingStepIndex(0);
+    setHasSavedProgress(false);
+    setMode("cooking");
+  };
+
+  const resumeCooking = () => {
+    setMode("cooking");
+  };
+
+  const resetProgressOnly = () => {
+    clearRecipeProgress(recipe.id);
+    setServings(recipe.baseServings);
+    setCheckedIngredients(new Set());
+    setCompletedSteps(new Set());
+    setCookingStepIndex(0);
+    setHasSavedProgress(false);
+  };
+
+  const progressFingerprint = useMemo(() => {
+    return {
+      servings,
+      checkedIngredientsCount: checkedIngredients.size,
+      completedStepsCount: completedSteps.size,
+      cookingStepIndex,
+      mode,
+    };
+  }, [servings, checkedIngredients, completedSteps, cookingStepIndex, mode]);
+
+  // Load saved progress when recipe changes
+  useEffect(() => {
+    const p = getRecipeProgress(recipe.id);
+    if (!p) {
+      setServings(recipe.baseServings);
+      setCheckedIngredients(new Set());
+      setCompletedSteps(new Set());
+      setCookingStepIndex(0);
+      setMode("overview");
+      setHasSavedProgress(false);
+      setIsHydrated(true);
+      return;
+    }
+
+    setServings(
+      typeof p.servings === "number" && p.servings > 0
+        ? p.servings
+        : recipe.baseServings
+    );
+    setCheckedIngredients(
+      new Set(Array.isArray(p.checkedIngredients) ? p.checkedIngredients : [])
+    );
+    setCompletedSteps(
+      new Set(Array.isArray(p.completedSteps) ? p.completedSteps : [])
+    );
+    setCookingStepIndex(
+      typeof p.cookingStepIndex === "number" && p.cookingStepIndex >= 0
+        ? p.cookingStepIndex
+        : 0
+    );
+    // Restore the last mode (cooking or overview)
+    setMode(p.lastMode === "cooking" ? "cooking" : "overview");
+    setHasSavedProgress(true);
+    setIsHydrated(true);
+  }, [recipe.id, recipe.baseServings]);
+
+  // Persist current session (which recipe + mode)
+  useEffect(() => {
+    if (!isHydrated) return;
+    saveCurrentSession(recipe.id, mode);
+  }, [isHydrated, recipe.id, mode]);
+
+  // Persist progress (best-effort) after hydration
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    const hasAny =
+      servings !== recipe.baseServings ||
+      checkedIngredients.size > 0 ||
+      completedSteps.size > 0 ||
+      cookingStepIndex > 0 ||
+      mode === "cooking";
+
+    if (!hasAny) {
+      setHasSavedProgress(false);
+      clearRecipeProgress(recipe.id);
+      return;
+    }
+
+    saveRecipeProgress(recipe.id, {
+      servings,
+      checkedIngredients: Array.from(checkedIngredients),
+      completedSteps: Array.from(completedSteps),
+      cookingStepIndex,
+      lastMode: mode,
+    });
+
+    setHasSavedProgress(true);
+  }, [
+    isHydrated,
+    recipe.id,
+    recipe.baseServings,
+    servings,
+    checkedIngredients,
+    completedSteps,
+    cookingStepIndex,
+    mode,
+    progressFingerprint,
+  ]);
 
   if (mode === "cooking") {
     return (
@@ -140,15 +262,59 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
           </div>
 
           {/* Start cooking */}
-          <div className="flex justify-center">
-            <Button
-              size="lg"
-              className="h-14 w-full sm:w-auto px-8 text-base"
-              onClick={startCooking}
-            >
-              <Play className="size-5" />
-              Start Cooking
-            </Button>
+          <div className="space-y-3">
+            {hasSavedProgress && (
+              <div className="rounded-lg border bg-card/50 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="text-sm text-muted-foreground">
+                  Progress saved: step{" "}
+                  {Math.min(cookingStepIndex + 1, recipe.steps.length)} of{" "}
+                  {recipe.steps.length}
+                  {servings !== recipe.baseServings
+                    ? ` • servings ${servings}`
+                    : ""}
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button className="h-12" onClick={resumeCooking}>
+                    <Play className="size-5" />
+                    Resume cooking
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-12 bg-transparent"
+                    onClick={startOverCooking}
+                  >
+                    <RotateCcw className="size-5" />
+                    Start over
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {!hasSavedProgress && (
+              <div className="flex justify-center">
+                <Button
+                  size="lg"
+                  className="h-14 w-full sm:w-auto px-8 text-base"
+                  onClick={startCooking}
+                >
+                  <Play className="size-5" />
+                  Start Cooking
+                </Button>
+              </div>
+            )}
+
+            {hasSavedProgress && (
+              <div className="flex justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground"
+                  onClick={resetProgressOnly}
+                >
+                  Clear saved progress
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Steps */}
