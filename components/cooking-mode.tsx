@@ -111,7 +111,9 @@ export function CookingMode({
                 <div className="mx-auto h-1.5 w-12 rounded-full bg-muted mb-4" />
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div>
-                    <h2 className="text-lg font-semibold">Ingredients</h2>
+                    <Drawer.Title className="text-lg font-semibold">
+                      Ingredients
+                    </Drawer.Title>
                     <p className="text-sm text-muted-foreground">
                       Servings: {servings} • {recipe.ingredients.length} items
                     </p>
