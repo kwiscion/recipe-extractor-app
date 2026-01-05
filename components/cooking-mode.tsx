@@ -162,7 +162,6 @@ export function CookingMode({
                 <Button
                   type="button"
                   variant={isDone ? "secondary" : "outline"}
-                  size="xl"
                   className="text-base w-36"
                   onClick={() => {
                     onToggleStepComplete(clampedIndex);
@@ -219,7 +218,6 @@ export function CookingMode({
               <Button
                 type="button"
                 variant="outline"
-                size="xl"
                 className="h-auto min-h-14 bg-transparent text-base flex-col gap-1 py-3"
                 onClick={() => onChangeStepIndex(clampedIndex - 1)}
                 disabled={!canPrev}

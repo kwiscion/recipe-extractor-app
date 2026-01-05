@@ -8,7 +8,10 @@ export function ScreenWakeLock() {
 
   const { isSupported, released, request, release } = useWakeLock({
     onRequest: () =>
-      toast({ description: "Screen will stay on while cooking" }),
+      toast({
+        description: "Screen will stay on while cooking",
+        duration: 1000,
+      }),
     onError: () =>
       toast({
         variant: "destructive",
