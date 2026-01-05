@@ -215,11 +215,14 @@ export async function extractRecipe(
     model,
     output: Output.object({ schema: recipeSchema }),
     system:
-      "You are a recipe extraction assistant. Extract the recipe from the provided content.",
+      "You are a recipe extraction assistant. Extract the recipe from the provided content. IMPORTANT: Keep the original language of the recipe. Do not translate.",
     prompt: `Extract the recipe from this content:\n\n${truncatedContent}\n\n
       Guidelines:
+      - Keep ALL text (title/description/ingredients/steps/warnings) in the same language as the source recipe. Do NOT translate.
       - For "quantity", use decimal numbers (0.5 instead of 1/2).
       - For items like "2-3 cloves", use the lower number (2) and add the range in notes.
+      - Preserve measurement units as used in the source recipe (do not convert unit systems).
+      - Do NOT introduce imperial units (cups/oz/lb) unless they appear in the source recipe.
       - If servings aren't specified, estimate based on the recipe.`,
     temperature: 0.1,
   });
@@ -239,8 +242,12 @@ Rules:
 - Return JSON only, matching the provided schema exactly.
 - The output array length MUST exactly match the input ingredient list length and order.
 - Keep conversions conservative. If unsure, return an empty alternatives array for that ingredient.
+- Keep the SAME language as the ingredient list. Do NOT translate ingredient names or notes.
+- Do NOT introduce a different measurement system than the recipe uses.
+  - If the ingredient list is metric (g/ml/l/kg), DO NOT output imperial units (cups/oz/lb).
+  - If the ingredient list uses imperial (cups/oz/lb), you MAY include metric equivalents (g/ml) as helpful alternatives.
 - If converting between volume and weight (e.g., tbsp flour -> grams), set exact=false and include a short note like "approx; depends on packing/brand".
-- For deterministic conversions (e.g., tbsp <-> ml, oz <-> g, l <-> ml) set exact=true.
+- For deterministic conversions (e.g., tbsp -> ml, oz -> g, l <-> ml, kg <-> g) set exact=true.
 - Do not repeat the original unit (don't include alternatives that are the same as the original unit).
 
 Ingredients (base quantities):\n${JSON.stringify(
@@ -255,8 +262,6 @@ Ingredients (base quantities):\n${JSON.stringify(
       )}`,
       temperature: 0.1,
     });
-
-    console.log(alternativesResult.output);
 
     enrichedIngredients = mergeIngredientAlternatives(
       result.output.ingredients,

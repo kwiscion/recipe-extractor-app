@@ -1,95 +1,110 @@
-import type { ApiKeys, Recipe, AlternativeMeasurement } from "./types"
+import type { ApiKeys, Recipe, AlternativeMeasurement } from "./types";
 
 function normalizeRecipe(recipe: any): Recipe {
   const ingredients = Array.isArray(recipe?.ingredients)
     ? recipe.ingredients.map((ing: any) => {
-        const altsRaw = Array.isArray(ing?.alternatives) ? ing.alternatives : []
+        const altsRaw = Array.isArray(ing?.alternatives)
+          ? ing.alternatives
+          : [];
         const alternatives: AlternativeMeasurement[] = altsRaw
-          .filter((a: any) => Number.isFinite(a?.value) && a.value > 0 && typeof a?.unit === "string" && a.unit.trim().length > 0)
+          .filter(
+            (a: any) =>
+              Number.isFinite(a?.quantity) &&
+              a.quantity > 0 &&
+              typeof a?.unit === "string" &&
+              a.unit.trim().length > 0
+          )
           .slice(0, 6)
           .map((a: any) => ({
-            value: a.value,
+            quantity: a.quantity,
             unit: a.unit.trim(),
             exact: Boolean(a.exact),
-            note: typeof a.note === "string" ? a.note.trim() || undefined : undefined,
-          }))
+            note:
+              typeof a.note === "string"
+                ? a.note.trim() || undefined
+                : undefined,
+          }));
 
         return {
           ...ing,
           alternatives: alternatives.length ? alternatives : undefined,
-        }
+        };
       })
-    : []
+    : [];
 
   const steps = Array.isArray(recipe?.steps)
     ? recipe.steps.map((step: any) => {
-        const title = (step?.title ?? step?.summary ?? "").toString().trim()
-        const instruction = (step?.instruction ?? step?.summary ?? "").toString().trim()
+        const title = (step?.title ?? step?.summary ?? "").toString().trim();
+        const instruction = (step?.instruction ?? step?.summary ?? "")
+          .toString()
+          .trim();
         return {
           title,
           instruction,
           details: typeof step?.details === "string" ? step.details : "",
           duration: typeof step?.duration === "string" ? step.duration : "",
-        }
+        };
       })
-    : []
+    : [];
 
   return {
     ...recipe,
     ingredients,
     steps,
-  } as Recipe
+  } as Recipe;
 }
 
 const STORAGE_KEYS = {
   API_KEYS: "recipe-extractor-api-keys",
   RECIPES: "recipe-extractor-recipes",
-} as const
+} as const;
 
 export function getApiKeys(): ApiKeys | null {
-  if (typeof window === "undefined") return null
-  const stored = localStorage.getItem(STORAGE_KEYS.API_KEYS)
-  if (!stored) return null
+  if (typeof window === "undefined") return null;
+  const stored = localStorage.getItem(STORAGE_KEYS.API_KEYS);
+  if (!stored) return null;
   try {
-    return JSON.parse(stored) as ApiKeys
+    return JSON.parse(stored) as ApiKeys;
   } catch {
-    return null
+    return null;
   }
 }
 
 export function saveApiKeys(keys: ApiKeys): void {
-  localStorage.setItem(STORAGE_KEYS.API_KEYS, JSON.stringify(keys))
+  localStorage.setItem(STORAGE_KEYS.API_KEYS, JSON.stringify(keys));
 }
 
 export function getRecipes(): Recipe[] {
-  if (typeof window === "undefined") return []
-  const stored = localStorage.getItem(STORAGE_KEYS.RECIPES)
-  if (!stored) return []
+  if (typeof window === "undefined") return [];
+  const stored = localStorage.getItem(STORAGE_KEYS.RECIPES);
+  if (!stored) return [];
   try {
-    const parsed = JSON.parse(stored)
-    if (!Array.isArray(parsed)) return []
-    return parsed.map(normalizeRecipe)
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(normalizeRecipe);
   } catch {
-    return []
+    return [];
   }
 }
 
 export function saveRecipe(recipe: Recipe): void {
-  const recipes = getRecipes()
+  const recipes = getRecipes();
   // Check if recipe with same URL exists, update it
-  const existingIndex = recipes.findIndex((r) => r.sourceUrl === recipe.sourceUrl)
+  const existingIndex = recipes.findIndex(
+    (r) => r.sourceUrl === recipe.sourceUrl
+  );
   if (existingIndex >= 0) {
-    recipes[existingIndex] = recipe
+    recipes[existingIndex] = recipe;
   } else {
-    recipes.unshift(recipe) // Add to beginning
+    recipes.unshift(recipe); // Add to beginning
   }
   // Keep only last 20 recipes
-  const trimmed = recipes.slice(0, 20)
-  localStorage.setItem(STORAGE_KEYS.RECIPES, JSON.stringify(trimmed))
+  const trimmed = recipes.slice(0, 20);
+  localStorage.setItem(STORAGE_KEYS.RECIPES, JSON.stringify(trimmed));
 }
 
 export function deleteRecipe(id: string): void {
-  const recipes = getRecipes()
-  const filtered = recipes.filter((r) => r.id !== id)
-  localStorage.setItem(STORAGE_KEYS.RECIPES, JSON.stringify(filtered))
+  const recipes = getRecipes();
+  const filtered = recipes.filter((r) => r.id !== id);
+  localStorage.setItem(STORAGE_KEYS.RECIPES, JSON.stringify(filtered));
 }

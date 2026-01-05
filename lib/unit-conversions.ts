@@ -71,18 +71,13 @@ export function getAlternativeMeasurements(
   // Volume conversions
   if (unit === "tsp") {
     out.push({ quantity: quantity * 5, unit: "ml", exact: true });
-    // Helpful also: tbsp
-    out.push({ quantity: quantity / 3, unit: "tbsp", exact: true });
   }
 
   if (unit === "tbsp") {
     out.push({ quantity: quantity * 15, unit: "ml", exact: true });
-    out.push({ quantity: quantity * 3, unit: "tsp", exact: true });
   }
 
   if (unit === "ml") {
-    out.push({ quantity: quantity / 15, unit: "tbsp", exact: true });
-    out.push({ quantity: quantity / 5, unit: "tsp", exact: true });
     if (quantity >= 1000)
       out.push({ quantity: quantity / 1000, unit: "l", exact: true });
   }
@@ -93,25 +88,12 @@ export function getAlternativeMeasurements(
 
   // Weight conversions
   if (unit === "g") {
-    out.push({ quantity: quantity / 28.349523125, unit: "oz", exact: true });
     if (quantity >= 1000)
       out.push({ quantity: quantity / 1000, unit: "kg", exact: true });
-    if (quantity >= 453.592)
-      out.push({ quantity: quantity / 453.59237, unit: "lb", exact: true });
   }
 
   if (unit === "kg") {
     out.push({ quantity: quantity * 1000, unit: "g", exact: true });
-    out.push({
-      quantity: (quantity * 1000) / 28.349523125,
-      unit: "oz",
-      exact: true,
-    });
-    out.push({
-      quantity: (quantity * 1000) / 453.59237,
-      unit: "lb",
-      exact: true,
-    });
   }
 
   if (unit === "oz") {
