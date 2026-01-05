@@ -1,37 +1,53 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { LinkIcon, ChefHat, ArrowRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useState } from "react";
+import { LinkIcon, ChefHat, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface UrlInputProps {
-  onSubmit: (url: string) => void
-  isLoading?: boolean
+  onSubmit: (url: string) => void;
+  isLoading?: boolean;
+  url?: string;
+  onUrlChange?: (url: string) => void;
 }
 
-export function UrlInput({ onSubmit, isLoading }: UrlInputProps) {
-  const [url, setUrl] = useState("")
-  const urlInputId = "recipe-url"
+export function UrlInput({
+  onSubmit,
+  isLoading,
+  url: controlledUrl,
+  onUrlChange,
+}: UrlInputProps) {
+  const [internalUrl, setInternalUrl] = useState("");
+  const url = controlledUrl !== undefined ? controlledUrl : internalUrl;
+  const setUrl = onUrlChange || setInternalUrl;
+  const urlInputId = "recipe-url";
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (url.trim()) {
-      onSubmit(url.trim())
+      if (!url.startsWith("http")) {
+        onSubmit("https://" + url.trim());
+      } else {
+        onSubmit(url.trim());
+      }
     }
-  }
+  };
 
   const isValidUrl = (str: string) => {
     try {
-      new URL(str)
-      return true
+      if (!str.startsWith("http")) {
+        str = "https://" + str;
+      }
+      new URL(str);
+      return true;
     } catch {
-      return false
+      return false;
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-xl mx-auto">
@@ -70,7 +86,11 @@ export function UrlInput({ onSubmit, isLoading }: UrlInputProps) {
           )}
         </Button>
       </div>
-      {url && !isValidUrl(url) && <p className="text-sm text-destructive mt-2">Please enter a valid URL</p>}
+      {url && !isValidUrl(url) && (
+        <p className="text-sm text-destructive mt-2">
+          Please enter a valid URL
+        </p>
+      )}
     </form>
-  )
+  );
 }

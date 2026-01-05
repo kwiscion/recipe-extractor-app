@@ -18,18 +18,19 @@ export const LLM_MODELS: LLMModel[] = [
     provider: "google",
   },
   { id: "gemini-3-pro-preview", name: "Gemini 3.0 Pro", provider: "google" },
-  // Anthropic
-  {
-    id: "claude-sonnet-4-5",
-    name: "Claude 4.5 Sonnet",
-    provider: "anthropic",
-  },
-  {
-    id: "claude-opus-4-5",
-    name: "Claude 4.5 Opus",
-    provider: "anthropic",
-  },
-  { id: "claude-haiku-4-5", name: "Claude 4.5 Haiku", provider: "anthropic" },
+  // Disabled because of CORS policy, TODO: fix this
+  // // Anthropic
+  // {
+  //   id: "claude-sonnet-4-5",
+  //   name: "Claude 4.5 Sonnet",
+  //   provider: "anthropic",
+  // },
+  // {
+  //   id: "claude-opus-4-5",
+  //   name: "Claude 4.5 Opus",
+  //   provider: "anthropic",
+  // },
+  // { id: "claude-haiku-4-5", name: "Claude 4.5 Haiku", provider: "anthropic" },
 ];
 
 export type AlternativeMeasurement = {
@@ -42,19 +43,19 @@ export type AlternativeMeasurement = {
   /**
    * Optional qualifier (e.g. "approx; depends on packing/brand")
    */
-  note?: string;
+  note: string;
 };
 
 export interface Ingredient {
   name: string;
   quantity: number;
   unit: string;
-  notes?: string;
+  notes: string;
   /**
    * Alternative measurements for the BASE quantity/unit (not scaled for servings).
    * These will be scaled client-side with the same servings ratio.
    */
-  alternatives?: AlternativeMeasurement[];
+  alternatives: AlternativeMeasurement[];
 }
 
 export interface RecipeStep {
@@ -67,14 +68,14 @@ export interface RecipeStep {
    * (e.g. "Boil in salted water and cook 2 minutes less than package time.")
    */
   instruction: string;
-  details?: string;
+  details: string;
   duration?: string;
 }
 
 export interface Recipe {
   id: string;
   title: string;
-  description?: string;
+  description: string;
   sourceUrl: string;
   baseServings: number;
   ingredients: Ingredient[];

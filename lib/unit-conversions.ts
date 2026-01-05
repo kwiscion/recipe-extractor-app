@@ -116,30 +116,50 @@ export function getAlternativeMeasurements(
 
   // Volume conversions
   if (unit === "tsp") {
-    out.push({ quantity: quantity * 5, unit: "ml", exact: true });
+    out.push({ quantity: quantity * 5, unit: "ml", exact: true, note: "" });
     if (prefersPolishUnits) {
-      out.push({ quantity: quantity / 3, unit: "łyżka", exact: true });
+      out.push({
+        quantity: quantity / 3,
+        unit: "łyżka",
+        exact: true,
+        note: "",
+      });
     }
   }
 
   if (unit === "tbsp") {
-    out.push({ quantity: quantity * 15, unit: "ml", exact: true });
+    out.push({ quantity: quantity * 15, unit: "ml", exact: true, note: "" });
     if (prefersPolishUnits) {
-      out.push({ quantity: quantity * 3, unit: "łyżeczka", exact: true });
+      out.push({
+        quantity: quantity * 3,
+        unit: "łyżeczka",
+        exact: true,
+        note: "",
+      });
     }
   }
 
   if (unit === "ml") {
     if (quantity >= 1000)
-      out.push({ quantity: quantity / 1000, unit: "l", exact: true });
+      out.push({ quantity: quantity / 1000, unit: "l", exact: true, note: "" });
     if (prefersPolishUnits && quantity < 250) {
-      out.push({ quantity: quantity / 15, unit: "łyżka", exact: true });
-      out.push({ quantity: quantity / 5, unit: "łyżeczka", exact: true });
+      out.push({
+        quantity: quantity / 15,
+        unit: "łyżka",
+        exact: true,
+        note: "",
+      });
+      out.push({
+        quantity: quantity / 5,
+        unit: "łyżeczka",
+        exact: true,
+        note: "",
+      });
     }
   }
 
   if (unit === "l") {
-    out.push({ quantity: quantity * 1000, unit: "ml", exact: true });
+    out.push({ quantity: quantity * 1000, unit: "ml", exact: true, note: "" });
   }
 
   // Polish cup convention (typical: 1 szklanka ≈ 250 ml) — mark as estimate
@@ -155,30 +175,45 @@ export function getAlternativeMeasurements(
   // Weight conversions
   if (unit === "g") {
     if (quantity >= 1000)
-      out.push({ quantity: quantity / 1000, unit: "kg", exact: true });
+      out.push({
+        quantity: quantity / 1000,
+        unit: "kg",
+        exact: true,
+        note: "",
+      });
   }
 
   if (unit === "kg") {
-    out.push({ quantity: quantity * 1000, unit: "g", exact: true });
+    out.push({ quantity: quantity * 1000, unit: "g", exact: true, note: "" });
   }
 
   if (unit === "dag") {
-    out.push({ quantity: quantity * 10, unit: "g", exact: true });
+    out.push({ quantity: quantity * 10, unit: "g", exact: true, note: "" });
   }
 
   if (unit === "oz") {
-    out.push({ quantity: quantity * 28.349523125, unit: "g", exact: true });
+    out.push({
+      quantity: quantity * 28.349523125,
+      unit: "g",
+      exact: true,
+      note: "",
+    });
   }
 
   if (unit === "lb") {
-    out.push({ quantity: quantity * 453.59237, unit: "g", exact: true });
+    out.push({
+      quantity: quantity * 453.59237,
+      unit: "g",
+      exact: true,
+      note: "",
+    });
   }
 
   // De-dupe units (keep first)
   const seen = new Set<string>();
   const deduped = out.filter((m) => {
-    const key = (m.unit ?? "").toLowerCase();
-    if (!key || seen.has(key)) return false;
+    const key = m.unit.toLowerCase();
+    if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });

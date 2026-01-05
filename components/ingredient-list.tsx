@@ -66,7 +66,7 @@ export function IngredientList({
           const seenUnits = new Set<string>([ingredient.unit.toLowerCase()]);
           const merged = [...deterministicAlts, ...llmAltsScaled]
             .filter((a) => {
-              const key = (a.unit ?? "").toLowerCase().trim();
+              const key = a.unit.toLowerCase().trim();
               if (!key || seenUnits.has(key)) return false;
               seenUnits.add(key);
               return true;

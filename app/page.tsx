@@ -53,6 +53,7 @@ const features = [
 export default function HomePage() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+  const [url, setUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingRecipe, setIsLoadingRecipe] = useState(false);
   const [currentRecipe, setCurrentRecipe] = useState<Recipe | null>(null);
@@ -109,7 +110,7 @@ export default function HomePage() {
   const handleSettingsSaved = () => {
     const loadedSettings = getSettings();
     setSettings(loadedSettings);
-    
+
     // If there was a pending URL, process it now
     if (pendingUrl && loadedSettings) {
       processRecipe(pendingUrl, loadedSettings);
@@ -154,6 +155,7 @@ export default function HomePage() {
   const handleBack = () => {
     clearCurrentSession();
     setCurrentRecipe(null);
+    // URL is preserved in state, so it will remain in the input
   };
 
   if (isLoading) {
@@ -203,7 +205,12 @@ export default function HomePage() {
           <CookingLoader />
         ) : (
           <>
-            <UrlInput onSubmit={handleUrlSubmit} isLoading={isLoadingRecipe} />
+            <UrlInput
+              onSubmit={handleUrlSubmit}
+              isLoading={isLoadingRecipe}
+              url={url}
+              onUrlChange={setUrl}
+            />
             {/* Model Selector */}
             <div className="mt-4">
               <ModelSelector

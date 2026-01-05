@@ -23,7 +23,11 @@ const recipeSchema = z.object({
         .describe(
           "Unit as used in the source recipe language (e.g. g, kg, ml, l, łyżka, łyżeczka, szklanka, szt.)"
         ),
-      notes: z.string().optional().describe("Optional notes like 'diced'"),
+      notes: z
+        .string()
+        .describe(
+          "Optional notes like 'diced'. Leave empty string if not provided."
+        ),
       alternatives: z
         .array(
           z.object({
@@ -40,15 +44,13 @@ const recipeSchema = z.object({
               ),
             note: z
               .string()
-              .optional()
               .describe(
-                "Optional qualifier (e.g. 'approx; depends on packing/brand')"
+                "Optional qualifier (e.g. 'approx; depends on packing/brand'). Leave empty string if not provided."
               ),
           })
         )
-        .optional()
         .describe(
-          "Optional alternative measurements for the BASE quantity/unit"
+          "Optional alternative measurements for the BASE quantity/unit. Leave empty array if not provided."
         ),
     })
   ),
@@ -62,12 +64,14 @@ const recipeSchema = z.object({
         .describe("Complete actionable instruction without expanding details"),
       details: z
         .string()
-        .optional()
-        .describe("Optional tips, substitutions, or troubleshooting"),
+        .describe(
+          "Optional tips, substitutions, or troubleshooting. Leave empty string if not provided."
+        ),
       duration: z
         .string()
-        .optional()
-        .describe("Estimated time like '5 minutes'"),
+        .describe(
+          "Estimated time like '5 minutes'. Leave empty string if not provided."
+        ),
     })
   ),
   warnings: z
@@ -95,9 +99,8 @@ const ingredientAlternativesSchema = z.object({
             ),
           note: z
             .string()
-            .optional()
             .describe(
-              "Optional qualifier (e.g. 'approx; depends on packing/brand')"
+              "Optional qualifier (e.g. 'approx; depends on packing/brand'). Leave empty string if not provided."
             ),
         })
       ),
@@ -110,8 +113,8 @@ function mergeIngredientAlternatives(
     name: string;
     quantity: number;
     unit: string;
-    notes?: string;
-    alternatives?: AlternativeMeasurement[];
+    notes: string;
+    alternatives: AlternativeMeasurement[];
   }>,
   enriched: unknown
 ) {
@@ -135,12 +138,12 @@ function mergeIngredientAlternatives(
         quantity: a.quantity,
         unit: a.unit.trim(),
         exact: Boolean(a.exact),
-        note: a.note?.trim() || undefined,
+        note: a.note?.trim() || "",
       }));
 
     return {
       ...ing,
-      alternatives: alts.length ? alts : undefined,
+      alternatives: alts.length ? alts : [],
     };
   });
 }
